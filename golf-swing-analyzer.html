@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>골프 스윙 스켈레톤 분석기</title>
+<style>
+  :root {
+    --bg: #0f1720;
+    --panel: #1a2430;
+    --panel-2: #212d3b;
+    --border: #2c3a4a;
+    --text: #eef2f6;
+    --text-dim: #9fb0c0;
+    --accent: #4ade80;
+    --accent-2: #38bdf8;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f6f8; --panel: #ffffff; --panel-2: #f0f3f6;
+      --border: #dde3e9; --text: #1a2430; --text-dim: #5b6b7a;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6f8; --panel: #ffffff; --panel-2: #f0f3f6;
+    --border: #dde3e9; --text: #1a2430; --text-dim: #5b6b7a;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    min-height: 100%;
+    padding: 20px 16px 40px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { margin-bottom: 18px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--text-dim); font-size: 0.9rem; line-height: 1.5; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(260px, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .stage video, .stage canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .stage .badge {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    z-index: 5;
+  }
+  .stage .countdown {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(0,0,0,0.35);
+    z-index: 6;
+  }
+  .stage .switchBtn {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-size: 1.15rem;
+    cursor: pointer;
+    z-index: 7;
+  }
+  .stage .switchBtn:active { transform: scale(0.92); }
+  .stage .switchBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .stage video, .stage canvas { transition: transform 0.15s ease; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  button {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 9px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: transform 0.05s ease, background 0.15s ease;
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+  button:hover:not(:disabled) { background: var(--border); }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #06210f; font-weight: 600; }
+  button.secondary { background: var(--accent-2); border-color: var(--accent-2); color: #06202b; font-weight: 600; }
+  button.ghost { background: transparent; }
+
+  .status-line {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    min-height: 1.2em;
+  }
+
+  .rec-state {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+  }
+  .rec-state .dot {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--panel-2); border: 1px solid var(--border);
+  }
+  .rec-state .dot::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border);
+  }
+  .rec-state .dot.ready::before { background: var(--accent); }
+
+  h2 { font-size: 1rem; margin: 0 0 10px; }
+  .angle-list { display: grid; gap: 8px; }
+  .angle-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 0.85rem;
+  }
+  .angle-row .val { font-variant-numeric: tabular-nums; color: var(--accent-2); font-weight: 600; }
+
+  .result-box {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+  }
+  .score-big {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .score-label { color: var(--text-dim); font-size: 0.8rem; margin-top: 2px; }
+  .diff-item {
+    display: flex; justify-content: space-between; gap: 10px;
+    font-size: 0.85rem; padding: 7px 0; border-bottom: 1px solid var(--border);
+  }
+  .diff-item:last-child { border-bottom: none; }
+  .diff-item .tag {
+    font-weight: 600;
+    color: var(--warn);
+  }
+  .diff-item .desc { color: var(--text-dim); flex: 1; text-align: right; }
+
+  .hint {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .loading-msg {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 30px 10px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🏌️ 골프 스윙 스켈레톤 분석기 (프로토타입)</h1>
+    <div class="sub">
+      웹캠으로 스윙 자세를 실시간 스켈레톤으로 추출하고, 레퍼런스 스윙(프로 또는 이전 촬영본)과 비교해 어떤 관절이 얼마나 다른지 알려줍니다.
+      먼저 <b>레퍼런스 녹화</b>로 기준 스윙을 저장한 뒤, <b>내 스윙 녹화</b>로 비교할 스윙을 촬영하세요.
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <div class="stage" id="stage">
+        <video id="video" playsinline autoplay muted></video>
+        <canvas id="canvas"></canvas>
+        <div class="badge" id="fpsBadge">카메라 준비 중…</div>
+        <button class="switchBtn" id="btnSwitchCamera" title="전/후면 카메라 전환" disabled>🔄</button>
+        <div class="countdown" id="countdown"></div>
+      </div>
+
+      <div class="rec-state">
+        <span class="dot" id="refDot">레퍼런스: 없음</span>
+        <span class="dot" id="myDot">내 스윙: 없음</span>
+      </div>
+
+      <div class="controls">
+        <button class="secondary" id="btnRecordRef">① 레퍼런스 녹화 (4초)</button>
+        <button class="primary" id="btnRecordMy" disabled>② 내 스윙 녹화 (4초)</button>
+        <button id="btnCompare" disabled>③ 비교하기</button>
+        <button class="ghost" id="btnReset">초기화</button>
+      </div>
+      <div class="status-line" id="statusLine">카메라 권한을 허용하면 시작됩니다.</div>
+      <div class="hint">
+        Tip: 옆모습(다운더라인 또는 정면 반대편)으로 전신이 프레임 안에 들어오게 서서 촬영하면 각도 인식이 더 정확합니다.
+        레퍼런스는 프로 영상을 웹캠에 재생해 찍거나, 잘 된 스윙을 먼저 녹화해두는 방식으로 활용할 수 있습니다.
+        모바일에서는 전면 카메라로 먼저 시작하며, 화면 우측 상단 🔄 버튼으로 후면 카메라로 전환할 수 있습니다(삼각대 등에 거치 후 후면 카메라 사용을 권장합니다).
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>실시간 관절 각도</h2>
+      <div class="angle-list" id="liveAngles">
+        <div class="loading-msg">포즈가 감지되면 표시됩니다</div>
+      </div>
+
+      <div class="result-box" id="resultBox" style="display:none;">
+        <h2>비교 결과</h2>
+        <div class="score-big" id="scoreBig">–</div>
+        <div class="score-label">유사도 점수 (100에 가까울수록 흡사)</div>
+        <div id="diffList" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script>
+(function () {
+  const videoEl = document.getElementById('video');
+  const canvasEl = document.getElementById('canvas');
+  const ctx = canvasEl.getContext('2d');
+  const fpsBadge = document.getElementById('fpsBadge');
+  const statusLine = document.getElementById('statusLine');
+  const countdownEl = document.getElementById('countdown');
+  const liveAnglesEl = document.getElementById('liveAngles');
+  const resultBox = document.getElementById('resultBox');
+  const scoreBig = document.getElementById('scoreBig');
+  const diffList = document.getElementById('diffList');
+  const refDot = document.getElementById('refDot');
+  const myDot = document.getElementById('myDot');
+
+  const btnRecordRef = document.getElementById('btnRecordRef');
+  const btnRecordMy = document.getElementById('btnRecordMy');
+  const btnCompare = document.getElementById('btnCompare');
+  const btnReset = document.getElementById('btnReset');
+  const btnSwitchCamera = document.getElementById('btnSwitchCamera');
+
+  const RECORD_SECONDS = 4;
+  const ANGLE_KEYS = [
+    'leftElbow', 'rightElbow', 'leftKnee', 'rightKnee',
+    'shoulderTilt', 'hipTilt', 'spineTilt'
+  ];
+  const ANGLE_LABELS = {
+    leftElbow: '왼쪽 팔꿈치',
+    rightElbow: '오른쪽 팔꿈치',
+    leftKnee: '왼쪽 무릎',
+    rightKnee: '오른쪽 무릎',
+    shoulderTilt: '어깨 기울기',
+    hipTilt: '골반 기울기',
+    spineTilt: '척추(상체) 기울기'
+  };
+
+  let latestLandmarks = null;
+  let recordingTarget = null; // 'ref' | 'my' | null
+  let recordBuffer = [];
+  let recordStartTime = 0;
+
+  let referenceData = null;
+  let myData = null;
+
+  function resizeCanvas() {
+    canvasEl.width = videoEl.videoWidth || 640;
+    canvasEl.height = videoEl.videoHeight || 480;
+  }
+
+  function angleAt(a, b, c) {
+    // angle at point b, formed by b->a and b->c, in degrees (2D)
+    const v1 = { x: a.x - b.x, y: a.y - b.y };
+    const v2 = { x: c.x - b.x, y: c.y - b.y };
+    const dot = v1.x * v2.x + v1.y * v2.y;
+    const n1 = Math.hypot(v1.x, v1.y);
+    const n2 = Math.hypot(v2.x, v2.y);
+    if (n1 === 0 || n2 === 0) return 0;
+    let cos = dot / (n1 * n2);
+    cos = Math.max(-1, Math.min(1, cos));
+    return Math.acos(cos) * (180 / Math.PI);
+  }
+
+  function lineAngleFromHorizontal(p1, p2) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    return Math.atan2(dy, dx) * (180 / Math.PI);
+  }
+
+  function lineAngleFromVertical(pTop, pBottom) {
+    const dx = pTop.x - pBottom.x;
+    const dy = pTop.y - pBottom.y;
+    return Math.atan2(dx, -dy) * (180 / Math.PI);
+  }
+
+  function computeAngles(lm) {
+    // MediaPipe Pose landmark indices
+    const LS = lm[11], RS = lm[12], LE = lm[13], RE = lm[14],
+          LW = lm[15], RW = lm[16], LH = lm[23], RH = lm[24],
+          LK = lm[25], RK = lm[26], LA = lm[27], RA = lm[28];
+
+    const midShoulder = { x: (LS.x + RS.x) / 2, y: (LS.y + RS.y) / 2 };
+    const midHip = { x: (LH.x + RH.x) / 2, y: (LH.y + RH.y) / 2 };
+
+    return {
+      leftElbow: angleAt(LS, LE, LW),
+      rightElbow: angleAt(RS, RE, RW),
+      leftKnee: angleAt(LH, LK, LA),
+      rightKnee: angleAt(RH, RK, RA),
+      shoulderTilt: lineAngleFromHorizontal(LS, RS),
+      hipTilt: lineAngleFromHorizontal(LH, RH),
+      spineTilt: lineAngleFromVertical(midShoulder, midHip)
+    };
+  }
+
+  function renderLiveAngles(angles) {
+    liveAnglesEl.innerHTML = ANGLE_KEYS.map(function (k) {
+      return '<div class="angle-row"><span>' + ANGLE_LABELS[k] + '</span>' +
+             '<span class="val">' + angles[k].toFixed(1) + '°</span></div>';
+    }).join('');
+  }
+
+  function onResults(results) {
+    resizeCanvas();
+    ctx.save();
+    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
+
+    if (results.poseLandmarks) {
+      latestLandmarks = results.poseLandmarks;
+      drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#4ade80', lineWidth: 3 });
+      drawLandmarks(ctx, results.poseLandmarks, { color: '#38bdf8', lineWidth: 1, radius: 3 });
+
+      const angles = computeAngles(results.poseLandmarks);
+      renderLiveAngles(angles);
+
+      if (recordingTarget) {
+        recordBuffer.push(ANGLE_KEYS.map(function (k) { return angles[k]; }));
+        const elapsed = (performance.now() - recordStartTime) / 1000;
+        const remain = Math.max(0, RECORD_SECONDS - elapsed);
+        countdownEl.style.display = 'flex';
+        countdownEl.textContent = remain.toFixed(1) + 's';
+        if (elapsed >= RECORD_SECONDS) {
+          finishRecording();
+        }
+      }
+    } else {
+      fpsBadge.textContent = '사람이 감지되지 않음';
+    }
+    ctx.restore();
+  }
+
+  function startRecording(target) {
+    recordingTarget = target;
+    recordBuffer = [];
+    recordStartTime = performance.now();
+    statusLine.textContent = (target === 'ref' ? '레퍼런스' : '내 스윙') + ' 녹화 중… 스윙을 한 번 해보세요.';
+    btnRecordRef.disabled = true;
+    btnRecordMy.disabled = true;
+    btnCompare.disabled = true;
+  }
+
+  function finishRecording() {
+    countdownEl.style.display = 'none';
+    const data = recordBuffer.slice();
+    if (recordingTarget === 'ref') {
+      referenceData = data;
+      refDot.textContent = '레퍼런스: 저장됨 (' + data.length + ' 프레임)';
+      refDot.classList.add('ready');
+      btnRecordMy.disabled = false;
+    } else if (recordingTarget === 'my') {
+      myData = data;
+      myDot.textContent = '내 스윙: 저장됨 (' + data.length + ' 프레임)';
+      myDot.classList.add('ready');
+    }
+    recordingTarget = null;
+    btnRecordRef.disabled = false;
+    btnRecordMy.disabled = !referenceData;
+    btnCompare.disabled = !(referenceData && myData);
+    statusLine.textContent = '녹화 완료. ' + (referenceData && myData ? '이제 비교할 수 있습니다.' : '다음 단계를 진행하세요.');
+  }
+
+  // --- DTW 비교 ---
+  function dtwCompare(seqA, seqB) {
+    const n = seqA.length, m = seqB.length;
+    function dist(a, b) {
+      let s = 0;
+      for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]);
+      return s / a.length;
+    }
+    const D = [];
+    for (let i = 0; i <= n; i++) D.push(new Array(m + 1).fill(Infinity));
+    D[0][0] = 0;
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        const cost = dist(seqA[i - 1], seqB[j - 1]);
+        D[i][j] = cost + Math.min(D[i - 1][j - 1], D[i - 1][j], D[i][j - 1]);
+      }
+    }
+    // backtrack
+    let i = n, j = m;
+    const path = [];
+    while (i > 0 && j > 0) {
+      path.push([i - 1, j - 1]);
+      const diag = D[i - 1][j - 1], up = D[i - 1][j], left = D[i][j - 1];
+      const min = Math.min(diag, up, left);
+      if (min === diag) { i--; j--; }
+      else if (min === up) { i--; }
+      else { j--; }
+    }
+    path.reverse();
+
+    const dimCount = seqA[0].length;
+    const sumAbs = new Array(dimCount).fill(0);
+    const sumSigned = new Array(dimCount).fill(0);
+    path.forEach(function (p) {
+      const a = seqA[p[0]], b = seqB[p[1]];
+      for (let k = 0; k < dimCount; k++) {
+        sumAbs[k] += Math.abs(a[k] - b[k]);
+        sumSigned[k] += (a[k] - b[k]);
+      }
+    });
+    const avgAbs = sumAbs.map(function (v) { return v / path.length; });
+    const avgSigned = sumSigned.map(function (v) { return v / path.length; });
+    const totalAvgCost = D[n][m] / path.length;
+
+    return { avgAbs: avgAbs, avgSigned: avgSigned, totalAvgCost: totalAvgCost };
+  }
+
+  function runComparison() {
+    if (!referenceData || !myData) return;
+    const result = dtwCompare(myData, referenceData); // myData = test(A), referenceData = B
+    const score = Math.max(0, Math.min(100, 100 - result.totalAvgCost * 2.2));
+
+    scoreBig.textContent = score.toFixed(0);
+
+    const items = ANGLE_KEYS.map(function (k, idx) {
+      return { key: k, abs: result.avgAbs[idx], signed: result.avgSigned[idx] };
+    }).sort(function (a, b) { return b.abs - a.abs; });
+
+    diffList.innerHTML = items.slice(0, 5).map(function (it) {
+      const direction = it.signed > 0 ? '더 큽니다' : '더 작습니다';
+      return '<div class="diff-item">' +
+        '<span class="tag">' + ANGLE_LABELS[it.key] + '</span>' +
+        '<span class="desc">레퍼런스 대비 평균 ' + Math.abs(it.signed).toFixed(1) + '° ' + direction + '</span>' +
+        '</div>';
+    }).join('');
+
+    resultBox.style.display = 'block';
+    statusLine.textContent = '비교 완료. 우측 결과를 확인하세요.';
+  }
+
+  function resetAll() {
+    referenceData = null;
+    myData = null;
+    refDot.textContent = '레퍼런스: 없음';
+    refDot.classList.remove('ready');
+    myDot.textContent = '내 스윙: 없음';
+    myDot.classList.remove('ready');
+    btnRecordRef.disabled = false;
+    btnRecordMy.disabled = true;
+    btnCompare.disabled = true;
+    resultBox.style.display = 'none';
+    statusLine.textContent = '초기화되었습니다. 레퍼런스부터 다시 녹화하세요.';
+  }
+
+  btnRecordRef.addEventListener('click', function () { startRecording('ref'); });
+  btnRecordMy.addEventListener('click', function () { startRecording('my'); });
+  btnCompare.addEventListener('click', runComparison);
+  btnReset.addEventListener('click', resetAll);
+
+  // --- 카메라 제어 (전면/후면 전환 지원) ---
+  let pose = null;
+  let currentStream = null;
+  let currentFacingMode = 'user'; // 'user' = 전면, 'environment' = 후면
+  let rafId = null;
+  let switching = false;
+
+  function stopCurrentStream() {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    if (currentStream) {
+      currentStream.getTracks().forEach(function (t) { t.stop(); });
+      currentStream = null;
+    }
+  }
+
+  async function processFrame() {
+    if (videoEl.readyState >= 2 && pose) {
+      try {
+        await pose.send({ image: videoEl });
+      } catch (e) {
+        // 프레임 처리 중 일시적 오류는 무시하고 다음 프레임 계속 진행
+      }
+    }
+    rafId = requestAnimationFrame(processFrame);
+  }
+
+  async function startCamera(facingMode) {
+    if (switching) return;
+    switching = true;
+    btnSwitchCamera.disabled = true;
+    fpsBadge.textContent = '카메라 여는 중…';
+
+    stopCurrentStream();
+
+    // 정확도 높은 순서로 시도: 지정 카메라 강제 → 선호 → 아무 카메라나
+    const attempts = [
+      { video: { facingMode: { exact: facingMode } }, audio: false },
+      { video: { facingMode: { ideal: facingMode } }, audio: false },
+      { video: true, audio: false }
+    ];
+
+    let stream = null;
+    let lastErr = null;
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(attempts[i]);
+        break;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+
+    if (!stream) {
+      fpsBadge.textContent = '카메라 오류';
+      statusLine.textContent = '웹캠 접근에 실패했습니다: ' + (lastErr ? lastErr.message : '알 수 없는 오류') + ' (브라우저 카메라 권한을 확인하세요)';
+      switching = false;
+      btnSwitchCamera.disabled = false;
+      return;
+    }
+
+    currentStream = stream;
+    currentFacingMode = facingMode;
+    videoEl.srcObject = stream;
+
+    // 전면 카메라일 때만 미리보기를 거울 모드로 표시 (실제 좌표 데이터는 영향 없음)
+    const mirror = (facingMode === 'user');
+    videoEl.style.transform = mirror ? 'scaleX(-1)' : 'none';
+    canvasEl.style.transform = mirror ? 'scaleX(-1)' : 'none';
+
+    await new Promise(function (resolve) {
+      videoEl.onloadedmetadata = function () { resolve(); };
+    });
+    await videoEl.play();
+    resizeCanvas();
+
+    fpsBadge.textContent = (facingMode === 'user' ? '전면 카메라' : '후면 카메라') + ' · 실시간 분석 중';
+    if (!referenceData && !myData) {
+      statusLine.textContent = '레퍼런스 스윙을 먼저 녹화하세요.';
+    }
+
+    switching = false;
+    btnSwitchCamera.disabled = false;
+
+    // 카메라가 2개 이상 있는 기기인지 확인해 전환 버튼 표시 여부 결정
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter(function (d) { return d.kind === 'videoinput'; });
+      btnSwitchCamera.style.display = videoInputs.length > 1 ? 'flex' : 'none';
+    } catch (e) {
+      // enumerateDevices 실패 시 버튼은 그대로 노출 (기기별 예외 상황 대비)
+    }
+
+    if (!rafId) {
+      processFrame();
+    }
+  }
+
+  btnSwitchCamera.addEventListener('click', function () {
+    const next = currentFacingMode === 'user' ? 'environment' : 'user';
+    startCamera(next);
+  });
+
+  // --- MediaPipe 초기화 ---
+  try {
+    pose = new Pose({
+      locateFile: function (file) {
+        return 'https://cdn.jsdelivr.net/npm/@mediapipe/pose/' + file;
+      }
+    });
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    pose.onResults(onResults);
+
+    // 모바일에서는 전면 카메라를 먼저 엽니다.
+    startCamera('user');
+  } catch (e) {
+    fpsBadge.textContent = '초기화 오류';
+    statusLine.textContent = '포즈 모델 로드에 실패했습니다: ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>
