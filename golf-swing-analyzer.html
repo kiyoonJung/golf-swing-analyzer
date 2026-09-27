@@ -208,6 +208,30 @@
     font-size: 0.85rem;
     padding: 30px 10px;
   }
+
+  .progress-wrap {
+    display: none;
+    margin-top: 10px;
+  }
+  .progress-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--accent-2);
+    transition: width 0.15s ease;
+  }
+  .progress-text {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
 </style>
 </head>
 <body>
@@ -215,8 +239,8 @@
   <header>
     <h1>🏌️ 골프 스윙 스켈레톤 분석기 (프로토타입)</h1>
     <div class="sub">
-      웹캠으로 스윙 자세를 실시간 스켈레톤으로 추출하고, 레퍼런스 스윙(프로 또는 이전 촬영본)과 비교해 어떤 관절이 얼마나 다른지 알려줍니다.
-      먼저 <b>레퍼런스 녹화</b>로 기준 스윙을 저장한 뒤, <b>내 스윙 녹화</b>로 비교할 스윙을 촬영하세요.
+      웹캠으로 스윙 자세를 실시간 스켈레톤으로 추출하고, 미리 가지고 있는 레퍼런스 영상(프로 스윙 등)과 비교해 어떤 관절이 얼마나 다른지 알려줍니다.
+      먼저 <b>레퍼런스 영상 업로드</b>로 기준 스윙을 분석시킨 뒤, <b>내 스윙 녹화</b>로 비교할 스윙을 웹캠으로 촬영하세요.
     </div>
   </header>
 
@@ -236,15 +260,23 @@
       </div>
 
       <div class="controls">
-        <button class="secondary" id="btnRecordRef">① 레퍼런스 녹화 (4초)</button>
+        <button class="secondary" id="btnUploadRef">① 레퍼런스 영상 업로드</button>
         <button class="primary" id="btnRecordMy" disabled>② 내 스윙 녹화 (4초)</button>
         <button id="btnCompare" disabled>③ 비교하기</button>
         <button class="ghost" id="btnReset">초기화</button>
       </div>
+      <input type="file" id="refFileInput" accept="video/*" style="display:none;">
+      <video id="refVideoFile" style="display:none;" muted playsinline></video>
+
+      <div class="progress-wrap" id="refProgressWrap">
+        <div class="progress-track"><div class="progress-bar" id="refProgressBar"></div></div>
+        <div class="progress-text" id="refProgressText">분석 중…</div>
+      </div>
+
       <div class="status-line" id="statusLine">카메라 권한을 허용하면 시작됩니다.</div>
       <div class="hint">
-        Tip: 옆모습(다운더라인 또는 정면 반대편)으로 전신이 프레임 안에 들어오게 서서 촬영하면 각도 인식이 더 정확합니다.
-        레퍼런스는 프로 영상을 웹캠에 재생해 찍거나, 잘 된 스윙을 먼저 녹화해두는 방식으로 활용할 수 있습니다.
+        Tip: 옆모습(다운더라인 또는 정면 반대편)으로 전신이 프레임 안에 들어오게 촬영된 영상일수록 각도 인식이 더 정확합니다.
+        레퍼런스 영상은 스윙 장면 위주의 짧은 클립을 올리는 것을 권장합니다 (전체 길이만큼 분석 시간이 걸립니다).
         모바일에서는 전면 카메라로 먼저 시작하며, 화면 우측 상단 🔄 버튼으로 후면 카메라로 전환할 수 있습니다(삼각대 등에 거치 후 후면 카메라 사용을 권장합니다).
       </div>
     </div>
@@ -282,11 +314,17 @@
   const refDot = document.getElementById('refDot');
   const myDot = document.getElementById('myDot');
 
-  const btnRecordRef = document.getElementById('btnRecordRef');
+  const btnUploadRef = document.getElementById('btnUploadRef');
   const btnRecordMy = document.getElementById('btnRecordMy');
   const btnCompare = document.getElementById('btnCompare');
   const btnReset = document.getElementById('btnReset');
   const btnSwitchCamera = document.getElementById('btnSwitchCamera');
+
+  const refFileInput = document.getElementById('refFileInput');
+  const refVideoFile = document.getElementById('refVideoFile');
+  const refProgressWrap = document.getElementById('refProgressWrap');
+  const refProgressBar = document.getElementById('refProgressBar');
+  const refProgressText = document.getElementById('refProgressText');
 
   const RECORD_SECONDS = 4;
   const ANGLE_KEYS = [
@@ -304,7 +342,7 @@
   };
 
   let latestLandmarks = null;
-  let recordingTarget = null; // 'ref' | 'my' | null
+  let recordingTarget = null; // 'my' | null  (레퍼런스는 더 이상 라이브 녹화하지 않음)
   let recordBuffer = [];
   let recordStartTime = 0;
 
@@ -382,7 +420,7 @@
       const angles = computeAngles(results.poseLandmarks);
       renderLiveAngles(angles);
 
-      if (recordingTarget) {
+      if (recordingTarget === 'my') {
         recordBuffer.push(ANGLE_KEYS.map(function (k) { return angles[k]; }));
         const elapsed = (performance.now() - recordStartTime) / 1000;
         const remain = Math.max(0, RECORD_SECONDS - elapsed);
@@ -402,30 +440,23 @@
     recordingTarget = target;
     recordBuffer = [];
     recordStartTime = performance.now();
-    statusLine.textContent = (target === 'ref' ? '레퍼런스' : '내 스윙') + ' 녹화 중… 스윙을 한 번 해보세요.';
-    btnRecordRef.disabled = true;
+    statusLine.textContent = '내 스윙 녹화 중… 스윙을 한 번 해보세요.';
+    btnUploadRef.disabled = true;
     btnRecordMy.disabled = true;
     btnCompare.disabled = true;
   }
 
   function finishRecording() {
     countdownEl.style.display = 'none';
-    const data = recordBuffer.slice();
-    if (recordingTarget === 'ref') {
-      referenceData = data;
-      refDot.textContent = '레퍼런스: 저장됨 (' + data.length + ' 프레임)';
-      refDot.classList.add('ready');
-      btnRecordMy.disabled = false;
-    } else if (recordingTarget === 'my') {
-      myData = data;
-      myDot.textContent = '내 스윙: 저장됨 (' + data.length + ' 프레임)';
-      myDot.classList.add('ready');
-    }
+    myData = recordBuffer.slice();
+    myDot.textContent = '내 스윙: 저장됨 (' + myData.length + ' 프레임)';
+    myDot.classList.add('ready');
+
     recordingTarget = null;
-    btnRecordRef.disabled = false;
+    btnUploadRef.disabled = false;
     btnRecordMy.disabled = !referenceData;
     btnCompare.disabled = !(referenceData && myData);
-    statusLine.textContent = '녹화 완료. ' + (referenceData && myData ? '이제 비교할 수 있습니다.' : '다음 단계를 진행하세요.');
+    statusLine.textContent = '녹화 완료. ' + (referenceData && myData ? '이제 비교할 수 있습니다.' : '레퍼런스 영상을 먼저 업로드하세요.');
   }
 
   // --- DTW 비교 ---
@@ -501,21 +532,152 @@
   function resetAll() {
     referenceData = null;
     myData = null;
+    refBuffer = [];
     refDot.textContent = '레퍼런스: 없음';
     refDot.classList.remove('ready');
     myDot.textContent = '내 스윙: 없음';
     myDot.classList.remove('ready');
-    btnRecordRef.disabled = false;
+    btnUploadRef.disabled = false;
     btnRecordMy.disabled = true;
     btnCompare.disabled = true;
     resultBox.style.display = 'none';
-    statusLine.textContent = '초기화되었습니다. 레퍼런스부터 다시 녹화하세요.';
+    refProgressWrap.style.display = 'none';
+    refFileInput.value = '';
+    if (refVideoFile.src) {
+      URL.revokeObjectURL(refVideoFile.src);
+      refVideoFile.removeAttribute('src');
+    }
+    statusLine.textContent = '초기화되었습니다. 레퍼런스 영상부터 다시 업로드하세요.';
   }
 
-  btnRecordRef.addEventListener('click', function () { startRecording('ref'); });
   btnRecordMy.addEventListener('click', function () { startRecording('my'); });
   btnCompare.addEventListener('click', runComparison);
   btnReset.addEventListener('click', resetAll);
+
+  // --- 레퍼런스 영상(파일) 업로드 및 포즈 추출 ---
+  let refPose = null;
+  let refBuffer = [];
+  let refExtracting = false;
+
+  function initRefPose() {
+    if (refPose) return refPose;
+    refPose = new Pose({
+      locateFile: function (file) {
+        return 'https://cdn.jsdelivr.net/npm/@mediapipe/pose/' + file;
+      }
+    });
+    refPose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    refPose.onResults(onRefResults);
+    return refPose;
+  }
+
+  function onRefResults(results) {
+    if (results.poseLandmarks) {
+      const angles = computeAngles(results.poseLandmarks);
+      refBuffer.push(ANGLE_KEYS.map(function (k) { return angles[k]; }));
+    }
+    scheduleNextRefFrame();
+  }
+
+  function scheduleNextRefFrame() {
+    if (!refExtracting) return;
+    if (refVideoFile.ended || refVideoFile.paused) {
+      finishRefExtraction();
+      return;
+    }
+    if (typeof refVideoFile.requestVideoFrameCallback === 'function') {
+      refVideoFile.requestVideoFrameCallback(function () { processRefFrame(); });
+    } else {
+      requestAnimationFrame(processRefFrame);
+    }
+  }
+
+  function processRefFrame() {
+    if (!refExtracting || refVideoFile.ended) {
+      finishRefExtraction();
+      return;
+    }
+    if (refVideoFile.duration) {
+      const pct = Math.min(100, (refVideoFile.currentTime / refVideoFile.duration) * 100);
+      refProgressBar.style.width = pct.toFixed(0) + '%';
+      refProgressText.textContent = '레퍼런스 영상 분석 중… ' + pct.toFixed(0) + '%';
+    }
+    refPose.send({ image: refVideoFile }).catch(function () {
+      scheduleNextRefFrame();
+    });
+  }
+
+  function finishRefExtraction() {
+    if (!refExtracting) return;
+    refExtracting = false;
+    refVideoFile.pause();
+
+    if (refBuffer.length < 5) {
+      statusLine.textContent = '영상에서 사람을 충분히 인식하지 못했습니다. 다른 영상으로 다시 시도해주세요 (전신이 프레임 안에 잘 보이는 영상 권장).';
+      refProgressWrap.style.display = 'none';
+      btnUploadRef.disabled = false;
+      refDot.textContent = '레퍼런스: 없음';
+      return;
+    }
+
+    referenceData = refBuffer.slice();
+    refDot.textContent = '레퍼런스: 저장됨 (' + referenceData.length + ' 프레임)';
+    refDot.classList.add('ready');
+    refProgressWrap.style.display = 'none';
+    btnUploadRef.disabled = false;
+    btnRecordMy.disabled = false;
+    btnCompare.disabled = !(referenceData && myData);
+    statusLine.textContent = '레퍼런스 영상 분석 완료. 이제 내 스윙을 녹화하세요.';
+  }
+
+  btnUploadRef.addEventListener('click', function () {
+    refFileInput.click();
+  });
+
+  refFileInput.addEventListener('change', function (e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    initRefPose();
+    refBuffer = [];
+    referenceData = null;
+    refDot.textContent = '레퍼런스: 분석 중…';
+    refDot.classList.remove('ready');
+    btnUploadRef.disabled = true;
+    btnRecordMy.disabled = true;
+    btnCompare.disabled = true;
+    resultBox.style.display = 'none';
+    refProgressWrap.style.display = 'block';
+    refProgressBar.style.width = '0%';
+    refProgressText.textContent = '영상을 불러오는 중…';
+
+    if (refVideoFile.src) {
+      URL.revokeObjectURL(refVideoFile.src);
+    }
+    const url = URL.createObjectURL(file);
+    refVideoFile.src = url;
+    refVideoFile.onloadedmetadata = function () {
+      refVideoFile.currentTime = 0;
+      refExtracting = true;
+      refVideoFile.play().then(function () {
+        scheduleNextRefFrame();
+      }).catch(function (err) {
+        statusLine.textContent = '영상 재생에 실패했습니다: ' + err.message;
+        refExtracting = false;
+        refProgressWrap.style.display = 'none';
+        btnUploadRef.disabled = false;
+      });
+    };
+    refVideoFile.onended = function () {
+      finishRefExtraction();
+    };
+  });
 
   // --- 카메라 제어 (전면/후면 전환 지원) ---
   let pose = null;
@@ -597,7 +759,7 @@
 
     fpsBadge.textContent = (facingMode === 'user' ? '전면 카메라' : '후면 카메라') + ' · 실시간 분석 중';
     if (!referenceData && !myData) {
-      statusLine.textContent = '레퍼런스 스윙을 먼저 녹화하세요.';
+      statusLine.textContent = '레퍼런스 영상을 먼저 업로드하세요.';
     }
 
     switching = false;
@@ -622,7 +784,7 @@
     startCamera(next);
   });
 
-  // --- MediaPipe 초기화 ---
+  // --- MediaPipe 초기화 (라이브 웹캠용) ---
   try {
     pose = new Pose({
       locateFile: function (file) {
