@@ -315,6 +315,15 @@ export function compareSwings(reference, userFrames, aspect = 1, club = null, vi
  * @returns {Array<{joint, diff, signed, side, level}>}
  *   diff = |차이|, signed = 사용자 - 프로, side = 'L'|'R', level = 'over'(과함) | 'under'(부족함)
  */
+/**
+ * 관절의 허용 각도(도). threshold 는 숫자(모든 관절 공통) 또는 { shoulder, elbow, hip, knee, default } 객체.
+ * 객체에 없는 관절은 default, default 도 없으면 15°.
+ */
+export function jointLimit(threshold, joint) {
+  if (typeof threshold === 'number') return threshold;
+  return threshold?.[joint] ?? threshold?.default ?? 15;
+}
+
 export function getOffenders(stage, threshold = 15) {
   const worst = {};
   for (const k in stage.diffs) {
@@ -324,7 +333,10 @@ export function getOffenders(stage, threshold = 15) {
       worst[joint] = { joint, diff: stage.diffs[k], signed, side, level: signed > 0 ? 'over' : 'under' };
     }
   }
-  return Object.values(worst).filter((o) => o.diff > threshold).sort((a, b) => b.diff - a.diff);
+  // 관절마다 허용 각도가 다르므로, 허용 각도를 얼마나 넘었는지(초과량) 순으로 정렬
+  const over = (o) => o.diff - jointLimit(threshold, o.joint);
+  return Object.values(worst).map((o) => ({ ...o, limit: jointLimit(threshold, o.joint) }))
+    .filter((o) => over(o) > 0).sort((a, b) => over(b) - over(a));
 }
 
 /** 허용 오차 이내로 비교된 관절 목록 (적당함 문구용) */

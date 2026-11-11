@@ -1,0 +1,15 @@
+{
+  "appId": "com.example.swingfixer",
+  "appName": "Swing Fixer",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#EEF1E8"
+  },
+  "android": {
+    "backgroundColor": "#EEF1E8"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

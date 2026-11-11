@@ -2,7 +2,7 @@
  * ui.js
  * 화면 표시 담당: 캔버스 스켈레톤(초록/빨강), 단계 칩, 하단 피드백 카드
  */
-import { JOINTS, getOffenders, getGoodJoints, headPoint, HEAD_RATIO } from './analyzer.js';
+import { JOINTS, getOffenders, getGoodJoints, jointLimit, headPoint, HEAD_RATIO } from './analyzer.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -25,6 +25,9 @@ export function renderChips(stages, onSelect, threshold) {
 
 export function setActiveChip(index) {
   document.querySelectorAll('.chip').forEach((c, i) => c.classList.toggle('on', i === index));
+  // 모바일에서는 칩이 가로 스크롤 한 줄이라, 선택된 칩이 보이도록 칩 상자만 옮긴다 (페이지 스크롤은 건드리지 않음)
+  const box = $('chips'), c = box.children[index];
+  if (c) box.scrollTo({ left: c.offsetLeft - (box.clientWidth - c.offsetWidth) / 2, behavior: 'smooth' });
 }
 
 /** 하단 피드백 카드 갱신 (club = 클럽 프로필: 허용 오차와 조언 문구를 가짐) */
@@ -37,7 +40,7 @@ export function showFeedback(stage, view, club) {
     // 적당함: 비교한 부위의 칭찬 문구 (최대 2개). 단계별 문구가 없으면 기본 문구만
     const goods = getGoodJoints(stage, club.threshold)
       .map((j) => club.stageAdvice?.[stage.name]?.[j]?.good).filter(Boolean).slice(0, 2);
-    text.innerHTML = `<strong>${stage.name}</strong>: 비교한 부위가 모두 프로와 ±${club.threshold}° 이내예요. 좋은 자세예요!`
+    text.innerHTML = `<strong>${stage.name}</strong>: 비교한 부위가 모두 프로와 허용 범위 이내예요. 좋은 자세예요!`
       + (goods.length ? '<br>' + goods.join(' ') : '');
     return;
   }
@@ -61,12 +64,12 @@ const JOINT_STATE = {
  * 부위 하나의 피드백 한 줄: [부위(좌우) 과함/부족함] 상태(수치) + 고치는 법 + 미스샷
  * 단계별 문구(club.stageAdvice)가 없으면 부위별 공통 문구(club.advice[view])로 대체
  */
-function jointMessage({ joint, diff, side, level }, stageName, view, club) {
+function jointMessage({ joint, diff, side, level, limit }, stageName, view, club) {
   const entry = club.stageAdvice?.[stageName]?.[joint]?.[level];
   const state = JOINT_STATE[joint]?.[level]?.(diff.toFixed(0)) ?? `오차 ${diff.toFixed(0)}°.`;
   const label = `<strong>${JOINT_KR[joint]}(${SIDE_KR[side] ?? side}) ${LEVEL_KR[level]}</strong>`; // <b> 는 카드 제목 스타일이라 사용 안 함
-  if (!entry) return `${label} — ${state} ${club.advice[view][joint] ?? ''}`;
-  return `${label} — ${state} ${entry.fix}<br><small>⚠ 이럴 때 나오기 쉬운 미스샷: ${entry.miss}</small>`;
+  if (!entry) return `${label} — ${state} <small>(허용 ±${limit}°)</small> ${club.advice[view][joint] ?? ''}`;
+  return `${label} — ${state} <small>(허용 ±${limit}°)</small> ${entry.fix}<br><small>⚠ 이럴 때 나오기 쉬운 미스샷: ${entry.miss}</small>`;
 }
 
 /**
@@ -208,12 +211,22 @@ function drawHead(ctx, lm, color, width) {
 const nearest = (arr, t, key) =>
   arr.reduce((best, cur, i) => (Math.abs(cur[key] - t) < Math.abs(arr[best][key] - t) ? i : best), 0);
 
+/**
+ * 캔버스 내부 해상도를 영상 원본 해상도에 맞춤.
+ * width/height 에 같은 값을 대입해도 브라우저는 캔버스 버퍼를 새로 만들기 때문에(1080p 이상이면 비용이 큼),
+ * 값이 실제로 달라졌을 때만 대입한다. (모바일 발열/프레임 저하 방지)
+ */
+function sizeCanvas(canvas, video) {
+  const W = video.videoWidth || 360, H = video.videoHeight || 640;
+  if (canvas.width !== W) canvas.width = W;
+  if (canvas.height !== H) canvas.height = H;
+}
+
 /** 사용자 영상 위 캔버스에 스켈레톤 1프레임 그리기 */
 function drawSkeleton(canvas, video, frames, stages, threshold, view, show = true) {
   const ctx = canvas.getContext('2d');
   // 캔버스 내부 해상도를 영상 원본 해상도에 맞춤 (CSS가 동일 비율로 확대/축소)
-  canvas.width = video.videoWidth || 360;
-  canvas.height = video.videoHeight || 640;
+  sizeCanvas(canvas, video);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!frames?.length || !stages?.length) return -1;
 
@@ -239,7 +252,7 @@ function drawSkeleton(canvas, video, frames, stages, threshold, view, show = tru
     for (const [side, [a, b, c]] of Object.entries(sides)) {
       const diff = stage.diffs[`${name}_${side}`];
       if (diff === undefined) continue;
-      const bad = diff > threshold;
+      const bad = diff > jointLimit(threshold, name);
       const color = bad ? '#E5383B' : '#1FA64A'; // 초과: 빨강 / 이내: 초록
       drawLine(ctx, P(a), P(b), color, w);
       drawLine(ctx, P(b), P(c), color, w);
@@ -314,8 +327,7 @@ export function hideAdjuster() { $('adjust').hidden = true; }
  */
 export function drawProSkeleton(canvas, video, lm, stage, threshold, view = 'front') {
   const ctx = canvas.getContext('2d');
-  canvas.width = video.videoWidth || 360;   // 영상 해상도에 맞춰 좌표계를 일치시킴
-  canvas.height = video.videoHeight || 640;
+  sizeCanvas(canvas, video);                // 영상 해상도에 맞춰 좌표계를 일치시킴
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!lm) return;
 
@@ -329,7 +341,7 @@ export function drawProSkeleton(canvas, video, lm, stage, threshold, view = 'fro
 
   for (const [name, sides] of Object.entries(JOINTS)) {
     for (const [side, [, b]] of Object.entries(sides)) {
-      if ((stage?.diffs?.[`${name}_${side}`] ?? 0) > threshold) {        // 사용자와 크게 다른 관절 강조 (비교된 관절만 diffs 에 있음)
+      if ((stage?.diffs?.[`${name}_${side}`] ?? 0) > jointLimit(threshold, name)) {        // 사용자와 크게 다른 관절 강조 (비교된 관절만 diffs 에 있음)
         const p = P(b);
         ctx.beginPath(); ctx.arc(p.x, p.y, w * 4, 0, Math.PI * 2);
         ctx.strokeStyle = '#E5383B'; ctx.lineWidth = w; ctx.stroke();

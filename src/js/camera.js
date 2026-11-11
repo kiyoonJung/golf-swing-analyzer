@@ -8,13 +8,17 @@ let recorder = null;    // MediaRecorder 인스턴스
 let chunks = [];        // 녹화 조각
 let lastObjectUrl = null; // 메모리 누수 방지를 위해 이전 blob URL 추적
 
-/** 라이브 카메라를 켜고 <video>에 연결 */
-export async function startCamera(videoEl) {
+/**
+ * 라이브 카메라를 켜고 <video>에 연결
+ * @param facingMode 'user'(전면) | 'environment'(후면). 기기에 그 카메라가 없으면(노트북 웹캠 등) 있는 카메라로 대체됨
+ */
+export async function startCamera(videoEl, facingMode = 'user') {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error('이 브라우저는 카메라를 지원하지 않습니다. (HTTPS 또는 localhost 필요)');
   }
+  stopCamera(videoEl); // 전/후면 전환 시 이전 스트림을 먼저 해제 (안 하면 일부 기기에서 카메라가 안 열림)
   stream = await navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode },
     audio: false,
   });
   videoEl.removeAttribute('src');

@@ -23,6 +23,7 @@ const state = {
   club: DEFAULT_CLUB, // 'driver' | 'iron' ... (src/js/clubs/index.js 에 등록된 id)
   view: 'front',     // 'front' | 'side'
   input: 'file',     // 'file' | 'live'
+  facing: 'user',    // 라이브 카메라 방향: 'user'(전면) | 'environment'(후면)
   reference: null,   // 기준 JSON (단계별 기준 각도 + 프로 영상 시각)
   userFrames: null,
   stages: null,      // 단계별 비교 결과 (미세 조정하면 해당 단계가 갱신됨)
@@ -275,7 +276,7 @@ $('inputSeg').onclick = (e) => {
   $('filePanel').hidden = mode !== 'file';
   $('livePanel').hidden = mode !== 'live';
   guideImg.hidden = mode !== 'live' || !guideImg.naturalWidth;
-  if (mode === 'file') stopCamera(userVideo);
+  if (mode === 'file') { stopCamera(userVideo); $('flipBtn').disabled = true; }
 };
 
 $('userFile').onchange = async (e) => {
@@ -286,22 +287,32 @@ $('userFile').onchange = async (e) => {
 $('camBtn').onclick = async () => {
   try {
     player.setReady('user', false); // 카메라 화면은 재생 컨트롤 대상이 아님
-    await startCamera(userVideo);
+    await startCamera(userVideo, state.facing);
     $('startRecBtn').disabled = false;
+    $('flipBtn').disabled = false;
     setStatus('가이드 이미지에 맞춰 자세를 잡고 녹화를 시작하세요.');
   } catch (err) { setStatus('카메라 접근 실패: ' + err.message); }
+};
+
+// 전면/후면 카메라 전환 (녹화 중에는 막음)
+$('flipBtn').onclick = async () => {
+  state.facing = state.facing === 'user' ? 'environment' : 'user';
+  try {
+    await startCamera(userVideo, state.facing);
+    setStatus(state.facing === 'user' ? '전면 카메라로 전환했어요.' : '후면 카메라로 전환했어요.');
+  } catch (err) { setStatus('카메라 전환 실패: ' + err.message); }
 };
 
 $('startRecBtn').onclick = () => {
   try {
     startRecording();
-    $('startRecBtn').disabled = true; $('stopRecBtn').disabled = false;
+    $('startRecBtn').disabled = true; $('stopRecBtn').disabled = false; $('flipBtn').disabled = true;
     setStatus('녹화 중…');
   } catch (err) { setStatus(err.message); }
 };
 
 $('stopRecBtn').onclick = async () => {
-  $('stopRecBtn').disabled = true;
+  $('stopRecBtn').disabled = true; $('flipBtn').disabled = true;
   try {
     const blob = await stopRecording();
     stopCamera(userVideo);
@@ -352,6 +363,13 @@ loadProReference().then(() => {
   if (player.disabled) setStatus('⚠ index.html 이 예전 버전이라 영상 재생 컨트롤이 꺼져 있습니다. '
     + 'index.html 을 최신 버전으로 교체하고 Ctrl+Shift+R 로 새로고침하세요. (분석은 정상 작동)');
 });
+
+// 하단 피드백 카드는 화면에 고정(fixed)이라 내용이 길어지면 카드 높이가 변한다.
+// 카드 높이를 CSS 변수(--card-h)로 알려 줘서, 카드에 가려지지 않게 페이지 맨 아래 여백을 맞춘다.
+new ResizeObserver(() => {
+  const card = $('feedbackCard');
+  document.documentElement.style.setProperty('--card-h', (card.hidden ? 0 : card.offsetHeight) + 'px');
+}).observe($('feedbackCard'));
 
 // 끝까지 실행됐다는 표시 (index.html 의 로딩 실패 안내가 이 값을 확인함)
 window.__appStarted = true;

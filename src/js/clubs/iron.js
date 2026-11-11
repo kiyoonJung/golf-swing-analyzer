@@ -6,7 +6,7 @@
  * 아래 값은 모두 "시작값"이다. 실제 아이언 영상으로 확인하며 조정할 것.
  */
 import { makeRuleBasedDetector, STAGES_7 } from './common.js';
-import { STAGE_ADVICE } from './advice_driver.js'; // TODO: 아이언 전용 문구(advice_iron.js)로 교체
+import { STAGE_ADVICE } from './advice_iron.js';
 
 export default {
   id: 'iron',
@@ -14,9 +14,13 @@ export default {
   stages: STAGES_7,
   headStages: ['테이크어웨이', '백스윙 탑', '다운스윙', '임팩트'], // TODO: 아이언 영상으로 확인 후 조정
   defaultStage: '백스윙 탑',
-  proSlowmo: { front: 1, side: 1 }, // TODO: 아이언 프로 영상을 넣으면 슬로모션 배율을 재서 입력 (driver.js 설명 참고)
-  stageAdvice: STAGE_ADVICE, // 지금은 드라이버 문구를 그대로 사용 (아이언 영상 확인 후 따로 작성)
-  threshold: 15, // TODO: 아이언 영상으로 확인 후 조정
+  // 아이언 프로 영상은 실시간 30fps(탑→임팩트 6프레임 ≈ 0.2초)로 보여 슬로모션 없음(1)으로 둠. 추정값.
+  proSlowmo: { front: 1, side: 1 },
+  stageAdvice: STAGE_ADVICE, // 아이언 전용 단계별 문구 (advice_iron.js)
+  // 관절별 허용 각도 오차(도). 프로와의 차이가 이 값을 넘으면 과함/부족함으로 판정 (analyzer.js jointLimit)
+  // 시작값(추정): 자세의 뼈대인 상체 숙임(hip)·무릎 굽힘(knee)은 작은 차이도 타점에 영향이 커서 엄격하게,
+  // 빠르게 움직이고 MediaPipe 오차가 큰 팔꿈치(elbow)는 느슨하게. 아이언·일반인 영상으로 검증하며 조정할 값 (지금은 드라이버와 같음)
+  threshold: { shoulder: 15, elbow: 20, hip: 10, knee: 12 },
 
   // ※ 임시 초안, 골프 아는 사람의 검수 필요
   advice: {

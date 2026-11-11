@@ -18,7 +18,10 @@ export default {
   proSlowmo: { front: 2.75, side: 2.75 },
   // 단계별·부위별 과함/적당함/부족함 문구 + 미스샷 (advice_driver.js). 없는 단계는 아래 advice(부위별 공통)로 대체
   stageAdvice: STAGE_ADVICE,
-  threshold: 15, // 허용 각도 오차(도). 일반인 영상으로 검증하며 조정할 값
+  // 관절별 허용 각도 오차(도). 프로와의 차이가 이 값을 넘으면 과함/부족함으로 판정 (analyzer.js jointLimit)
+  // 시작값(추정): 자세의 뼈대인 상체 숙임(hip)·무릎 굽힘(knee)은 작은 차이도 타점에 영향이 커서 엄격하게,
+  // 빠르게 움직이고 MediaPipe 오차가 큰 팔꿈치(elbow)는 느슨하게. 일반인 영상으로 검증하며 조정할 값
+  threshold: { shoulder: 15, elbow: 20, hip: 10, knee: 12 },
 
   // 시점(정면/측면) × 관절별 교정 문구 — ※ 임시 초안, 골프 아는 사람의 검수 필요
   advice: {

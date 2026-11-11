@@ -4,16 +4,43 @@
  */
 
 const MP_VERSION = '0.5.1675469404';
+
+// MediaPipe 파일 위치. 앱(Capacitor)에서는 번들에 넣은 로컬 파일을 먼저 쓰고(오프라인 동작),
+// 로컬에 없으면(웹 개발 중 npm run build 를 안 한 경우 등) CDN 으로 대체한다.
+// 로컬 파일은 `npm run build` 가 node_modules/@mediapipe/pose 에서 vendor/mediapipe-pose 로 복사한다.
+const LOCAL_BASE = new URL('vendor/mediapipe-pose', document.baseURI).href;
+const CDN_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MP_VERSION}`;
+let mpBase = null;   // 실제로 불러온 위치
 let pose = null;
 let pendingResolve = null; // 현재 처리 중인 프레임의 결과를 돌려줄 resolver
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src; el.crossOrigin = 'anonymous';
+    el.onload = resolve; el.onerror = () => reject(new Error(src));
+    document.head.appendChild(el);
+  });
+}
+
+/** pose.js 를 로컬 → CDN 순서로 불러온다 (성공하면 window.Pose 가 생김) */
+async function loadPoseLibrary() {
+  if (window.Pose && mpBase) return;
+  for (const base of [LOCAL_BASE, CDN_BASE]) {
+    // 서버가 없는 파일에 index.html 을 200 으로 돌려주는 경우도 있어서, 불러온 뒤 window.Pose 가 생겼는지로 판단
+    try { await loadScript(`${base}/pose.js`); } catch { continue; }
+    if (window.Pose) { mpBase = base; return; }
+  }
+  throw new Error('MediaPipe Pose 를 불러오지 못했습니다. (앱: npm run build 로 vendor 폴더가 만들어졌는지 확인 / 웹: 네트워크 확인)');
+}
 
 /** Pose 인스턴스를 한 번만 생성/초기화 */
 export async function initPose() {
   if (pose) return pose;
-  if (!window.Pose) throw new Error('MediaPipe Pose 스크립트를 불러오지 못했습니다. 네트워크를 확인하세요.');
+  await loadPoseLibrary();
 
   pose = new window.Pose({
-    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MP_VERSION}/${f}`,
+    locateFile: (f) => `${mpBase}/${f}`,
   });
   pose.setOptions({
     modelComplexity: 2,       // 가장 정확한 모델 (tools/extract_reference.py 와 동일해야 기준값과 비교가 맞음)

@@ -2,11 +2,14 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- viewport-fit=cover: 노치/홈 인디케이터 영역까지 화면을 쓰고, 안전 영역은 CSS env(safe-area-inset-*) 로 피함 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#EEF1E8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121A14" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
   <title>골프 스윙 포즈 분석</title>
   <link rel="stylesheet" href="src/css/style.css">
-  <!-- MediaPipe Pose (전역 window.Pose 로 노출됨, 버전 고정) -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+  <!-- MediaPipe Pose 는 src/js/mediapipe.js 가 처음 분석할 때 불러옴 (앱: vendor/mediapipe-pose 로컬 파일 우선, 없으면 CDN) -->
 </head>
 <body>
   <header class="topbar">
@@ -28,7 +31,7 @@
 
     <!-- 파일 업로드 모드 도구 -->
     <div class="controls" id="filePanel">
-      <label class="btn">내 영상 선택 (.mp4)
+      <label class="btn">내 영상 선택
         <input id="userFile" type="file" accept="video/*" hidden>
       </label>
     </div>
@@ -36,6 +39,7 @@
     <!-- 라이브 카메라 모드 도구 -->
     <div class="controls" id="livePanel" hidden>
       <button class="btn" id="camBtn">카메라 켜기</button>
+      <button class="btn" id="flipBtn" disabled aria-label="전면/후면 카메라 전환">🔄 전환</button>
       <button class="btn rec" id="startRecBtn" disabled>녹화 시작</button>
       <button class="btn" id="stopRecBtn" disabled>녹화 종료</button>
     </div>
