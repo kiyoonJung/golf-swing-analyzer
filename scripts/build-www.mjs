@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const slim = process.argv.includes('--slim');
+const noHeavy = process.argv.includes('--no-heavy');
 const r = (...p) => path.join(root, ...p);
 const mb = (n) => (n / 1048576).toFixed(1) + ' MB';
 
@@ -42,6 +43,10 @@ if (slim) {
 }
 if (!fs.existsSync(path.join(mpDst, 'pose_landmark_heavy.tflite'))) {
   console.warn('⚠ pose_landmark_heavy.tflite 가 없습니다. modelComplexity 2 를 쓰는 이 앱은 이 파일이 꼭 필요합니다. @mediapipe/pose 버전을 확인하세요.');
+}
+if (noHeavy) fs.rmSync(path.join(mpDst, 'pose_landmark_heavy.tflite'), { force: true });
+if (!noHeavy && !fs.existsSync(path.join(mpDst, 'pose_landmark_heavy.tflite'))) {
+  console.warn('⚠ pose_landmark_heavy.tflite 가 없습니다. ...');
 }
 
 // 2) www/
