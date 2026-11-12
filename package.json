@@ -11,6 +11,7 @@
     "build": "node scripts/build-www.mjs",
     "build:native": "node scripts/build-www.mjs --native",
     "build:slim": "node scripts/build-www.mjs --slim",
+    "build:web": "node scripts/build-www.mjs --no-heavy",
 <<<<<<< HEAD:swing-fixer/package.json
     "sync": "npm run build:native && cap sync",
 =======
