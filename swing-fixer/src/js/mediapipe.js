@@ -11,6 +11,10 @@ const MP_VERSION = '0.5.1675469404';
 const LOCAL_BASE = new URL('vendor/mediapipe-pose', document.baseURI).href;
 const CDN_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MP_VERSION}`;
 let mpBase = null;   // 실제로 불러온 위치
+// 웹 배포(Cloudflare Workers)는 파일 하나당 25 MiB 제한이 있어서, 그보다 큰 파일(pose_landmark_heavy.tflite 26.4 MiB)은
+// 빌드 때 www 에서 빼고 CDN 에서 받는다. 어떤 파일이 그런지는 빌드가 만드는 local-files.json 의 remote 목록에 적혀 있다.
+// 앱(Capacitor) 빌드는 제한이 없어서 remote 가 비어 있고 전부 내장 파일을 쓴다.
+let remoteFiles = new Set();
 let pose = null;
 let pendingResolve = null; // 현재 처리 중인 프레임의 결과를 돌려줄 resolver
 
@@ -29,30 +33,28 @@ async function loadPoseLibrary() {
   for (const base of [LOCAL_BASE, CDN_BASE]) {
     // 서버가 없는 파일에 index.html 을 200 으로 돌려주는 경우도 있어서, 불러온 뒤 window.Pose 가 생겼는지로 판단
     try { await loadScript(`${base}/pose.js`); } catch { continue; }
-    if (window.Pose) { mpBase = base; return; }
+    if (window.Pose) {
+      mpBase = base;
+      if (base === LOCAL_BASE) {
+        try {
+          const res = await fetch(`${LOCAL_BASE}/local-files.json`, { cache: 'no-cache' });
+          const info = res.ok ? await res.json() : null;
+          if (Array.isArray(info?.remote)) remoteFiles = new Set(info.remote);
+        } catch { /* 목록이 없으면(개발 서버 등) 전부 로컬 파일을 쓴다 */ }
+      }
+      return;
+    }
   }
   throw new Error('MediaPipe Pose 를 불러오지 못했습니다. (앱: npm run build 로 vendor 폴더가 만들어졌는지 확인 / 웹: 네트워크 확인)');
-}
-const HEAVY = 'pose_landmark_heavy.tflite';
-
-/** 로컬(vendor)에 heavy 모델이 실제로 있는지 확인. 웹 배포(--no-heavy)에서는 없으므로 false */
-async function hasLocalHeavy() {
-  if (mpBase !== LOCAL_BASE) return false;   // 이미 CDN 으로 불러왔으면 로컬 확인 불필요
-  try {
-    const r = await fetch(`${LOCAL_BASE}/${HEAVY}`, { method: 'HEAD' });
-    return r.ok && !(r.headers.get('content-type') || '').includes('html');
-  } catch { return false; }
 }
 
 /** Pose 인스턴스를 한 번만 생성/초기화 */
 export async function initPose() {
   if (pose) return pose;
   await loadPoseLibrary();
-  const localHeavy = await hasLocalHeavy();   // 추가
 
   pose = new window.Pose({
-    // heavy 모델만 로컬에 없으면 CDN 에서, 나머지 파일은 기존대로 mpBase 에서
-    locateFile: (f) => (f === HEAVY && !localHeavy ? `${CDN_BASE}/${f}` : `${mpBase}/${f}`),
+    locateFile: (f) => `${remoteFiles.has(f) ? CDN_BASE : mpBase}/${f}`,
   });
   pose.setOptions({
     modelComplexity: 2,       // 가장 정확한 모델 (tools/extract_reference.py 와 동일해야 기준값과 비교가 맞음)
