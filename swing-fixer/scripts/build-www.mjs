@@ -17,8 +17,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const slim = process.argv.includes('--slim');
+<<<<<<< HEAD:swing-fixer/scripts/build-www.mjs
 const native = process.argv.includes('--native');
 const WORKERS_MAX = 25 * 1024 * 1024; // Cloudflare Workers 정적 파일 1개 최대 크기
+=======
+>>>>>>> parent of b970424 (20261111 - 11주차 모바일 화면 편의 패치.1 서버 패치):scripts/build-www.mjs
 const r = (...p) => path.join(root, ...p);
 const mb = (n) => (n / 1048576).toFixed(1) + ' MB';
 
