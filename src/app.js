@@ -16,35 +16,6 @@ import { createPlayer } from './js/player.js';
 const $ = (id) => document.getElementById(id);
 const proVideo = $('proVideo');
 const userVideo = $('userVideo');
-
-// ===== 모바일 전용 동작 (화면 폭 640px 이하 = style.css 의 모바일 레이아웃과 같은 기준) =====
-// 데스크톱은 기존 동작을 그대로 둔다.
-const mobileMQ = window.matchMedia('(max-width: 640px)');
-
-// 영상 칸을 영상 원본 비율(가로/세로/정사각형)에 자동으로 맞춤 → 검은 여백이 생기지 않음.
-// 파일 업로드·프로 영상 교체는 기존 코드(setUserVideo 등)가 이미 처리하고,
-// 여기서는 라이브 카메라 켜기·전면/후면 전환처럼 영상 크기가 나중에 정해지거나 바뀌는 경우를 모바일에서 보완한다.
-// 'resize' 는 <video> 의 videoWidth/Height 가 바뀔 때 발생 (카메라 전환 등)
-for (const v of [proVideo, userVideo]) {
-  const fit = () => { if (mobileMQ.matches) fitStageToVideo(v); };
-  v.addEventListener('loadedmetadata', fit);
-  v.addEventListener('resize', fit);
-}
-// 폰을 돌려 모바일 폭으로 바뀌었을 때도 다시 맞춤
-mobileMQ.addEventListener('change', () => { if (mobileMQ.matches) [proVideo, userVideo].forEach(fitStageToVideo); });
-
-// 비교 영상 크기: 작게(s) / 보통(m, 두 영상 나란히) / 크게(l, 위아래로 한 줄씩 크게). 선택은 기억해 둠.
-// 실제 크기 규칙은 style.css 의 모바일 영역(.players[data-size=...])에 있고, 데스크톱에서는 조절 바 자체가 숨겨져 있음.
-const SIZE_KEY = 'swingfixer.viewSize';
-function setViewSize(size) {
-  document.querySelector('.players').dataset.size = size;
-  document.querySelectorAll('#sizeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.size === size));
-  try { localStorage.setItem(SIZE_KEY, size); } catch { /* 저장소를 못 써도 동작에는 영향 없음 */ }
-}
-document.querySelectorAll('#sizeSeg button').forEach((b) => { b.onclick = () => setViewSize(b.dataset.size); });
-let savedSize = 'm';
-try { savedSize = localStorage.getItem(SIZE_KEY) || 'm'; } catch { /* 무시 */ }
-setViewSize(['s', 'm', 'l'].includes(savedSize) ? savedSize : 'm');
 const guideImg = $('guideImg');
 
 // ===== 앱 상태 =====

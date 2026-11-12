@@ -1,0 +1,9 @@
+{
+  // 서버 코드 없이 www/ 폴더의 정적 파일만 올리는 설정 (npm run deploy)
+  // 테스트용 이름: 기존 주소(golf-swing-analyzer)는 건드리지 않고 별도 주소로 올라감. 기존 주소를 교체하려면 name 을 "golf-swing-analyzer" 로 바꿀 것
+  "name": "golf-swing-analyzer-test",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./www"
+  }
+}
