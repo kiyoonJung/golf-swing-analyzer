@@ -58,6 +58,7 @@ async function hasLocalHeavy() {
     return r.ok && !(r.headers.get('content-type') || '').includes('html');
   } catch { return false; }
 }
+
 /** Pose 인스턴스를 한 번만 생성/초기화 */
 export async function initPose() {
   if (pose) return pose;
