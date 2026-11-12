@@ -54,11 +54,7 @@ export async function initPose() {
   await loadPoseLibrary();
 
   pose = new window.Pose({
-<<<<<<< HEAD:swing-fixer/src/js/mediapipe.js
     locateFile: (f) => `${remoteFiles.has(f) ? CDN_BASE : mpBase}/${f}`,
-=======
-    locateFile: (f) => `${mpBase}/${f}`,
->>>>>>> parent of b970424 (20261111 - 11주차 모바일 화면 편의 패치.1 서버 패치):src/js/mediapipe.js
   });
   pose.setOptions({
     modelComplexity: 2,       // 가장 정확한 모델 (tools/extract_reference.py 와 동일해야 기준값과 비교가 맞음)

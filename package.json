@@ -11,11 +11,7 @@
     "build": "node scripts/build-www.mjs",
     "build:native": "node scripts/build-www.mjs --native",
     "build:slim": "node scripts/build-www.mjs --slim",
-<<<<<<< HEAD:swing-fixer/package.json
     "sync": "npm run build:native && cap sync",
-=======
-    "sync": "npm run build && cap sync",
->>>>>>> parent of b970424 (20261111 - 11주차 모바일 화면 편의 패치.1 서버 패치):package.json
     "ios": "npm run sync && cap open ios",
     "android": "npm run sync && cap open android",
     "patch-native": "node scripts/patch-native.mjs",
