@@ -284,7 +284,11 @@ export function startOverlayLoop(canvas, video, getData, onStage) {
 
 /** 영상 원본 비율에 맞춰 스테이지 박스 크기 조정 */
 export function fitStageToVideo(video) {
-  if (video.videoWidth) video.parentElement.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+  if (!video.videoWidth) return;
+  const stage = video.parentElement;
+  stage.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+  // 모바일 '영상 크기' 조절(작게/크게)이 칸 폭을 (화면 높이 × 비율)로 제한할 때 쓰는 값. 데스크톱 CSS 는 이 값을 쓰지 않음
+  stage.style.setProperty('--ar', (video.videoWidth / video.videoHeight).toFixed(4));
 }
 
 // ===== 미세 조정 패널 (AI가 찾은 장면이 어긋났을 때 사람이 프레임 단위로 바로잡음) =====
