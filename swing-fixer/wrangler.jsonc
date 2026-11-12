@@ -1,0 +1,9 @@
+{
+  // 서버 코드 없이 www/ 폴더의 정적 파일만 올리는 설정
+  // name 은 Cloudflare 에 이미 있는 Worker 이름과 같아야 함 → golf-swing-analyzer.golf-swing-analyzer.workers.dev 가 새 버전으로 교체됨
+  "name": "golf-swing-analyzer",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./www"
+  }
+}

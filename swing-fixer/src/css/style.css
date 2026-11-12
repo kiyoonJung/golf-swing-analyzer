@@ -3,13 +3,6 @@
   --bg: #EEF1E8; --ink: #17231B; --sub: #5B6B5F;
   --card: #FFFFFF; --line: #CBD3C4;
   --turf: #2F6B3A; --ok: #1FA64A; --bad: #E5383B;
-  color-scheme: light dark; /* 슬라이더·파일 선택 등 기본 컨트롤도 다크모드를 따름 */
-
-  /* 안전 영역(노치·상태바·홈 인디케이터). iOS 는 env() 를, Android(Capacitor 8 System Bars)는 주입되는 --safe-area-inset-* 를 사용 */
-  --sat: max(env(safe-area-inset-top, 0px),    var(--safe-area-inset-top, 0px));
-  --sab: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
-  --sal: max(env(safe-area-inset-left, 0px),   var(--safe-area-inset-left, 0px));
-  --sar: max(env(safe-area-inset-right, 0px),  var(--safe-area-inset-right, 0px));
 }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #121A14; --ink: #E8EEE4; --sub: #9DB0A2; --card: #1B261E; --line: #2D3B31; --turf: #4E9A5C; }
@@ -17,21 +10,11 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 body {
-  margin: 0;
-  /* 아래 여백 = 하단 고정 피드백 카드 높이(--card-h, app.js 가 측정) + 여유 + 홈 인디케이터 */
-  padding: calc(12px + var(--sat)) calc(12px + var(--sar)) calc(var(--card-h, 160px) + 28px + var(--sab)) calc(12px + var(--sal));
+  margin: 0; padding: 12px 12px 220px; /* 하단 고정 카드만큼 여백 확보 */
   background: var(--bg); color: var(--ink);
-  font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, sans-serif;
-  touch-action: manipulation;              /* 더블탭 확대 방지 (버튼을 빨리 연타해도 화면이 확대되지 않음) */
-  -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;             /* 당겨서 튕기는 효과 제거 (앱 느낌) */
-}
-/* 버튼류는 길게 눌러도 글자 선택/미리보기 메뉴가 뜨지 않게 */
-button, .seg, .chip, .stage, .vctl, label.btn {
-  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
 }
 h1 { font-size: 20px; margin: 4px 0 12px; }
 h2 { font-size: 13px; color: var(--sub); margin: 0 0 4px; font-weight: 600; }
@@ -39,12 +22,12 @@ h2 { font-size: 13px; color: var(--sub); margin: 0 0 4px; font-weight: 600; }
 /* ===== 컨트롤 ===== */
 .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); }
-.seg button { border: 0; background: transparent; color: var(--ink); padding: 9px 14px; font-size: 14px; cursor: pointer; font-family: inherit; }
+.seg button { border: 0; background: transparent; color: var(--ink); padding: 9px 14px; font-size: 14px; cursor: pointer; }
 .seg button.on { background: var(--turf); color: #fff; }
 
 .btn {
   border: 1px solid var(--line); background: var(--card); color: var(--ink);
-  padding: 9px 14px; border-radius: 10px; font-size: 14px; cursor: pointer; font-family: inherit;
+  padding: 9px 14px; border-radius: 10px; font-size: 14px; cursor: pointer;
 }
 .btn.main { background: var(--turf); border-color: var(--turf); color: #fff; }
 .btn.rec  { background: var(--bad);  border-color: var(--bad);  color: #fff; }
@@ -53,12 +36,11 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
 
 /* ===== 듀얼 플레이어 ===== */
 .players { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.pane { min-width: 0; } /* grid 칸이 내용(컨트롤) 때문에 밀려 넓어지는 것 방지 */
 
 /* 비디오·가이드·캔버스를 같은 박스에 겹쳐 좌표계를 일치시킴 */
 .stage {
   position: relative; background: #000; border-radius: 10px; overflow: hidden;
-  aspect-ratio: 9 / 16; max-height: 62vh; max-height: 62svh; margin: 0 auto;
+  aspect-ratio: 9 / 16; max-height: 62vh; margin: 0 auto;
 }
 .stage video, .stage canvas, .stage img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
@@ -66,7 +48,7 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
 .stage img { opacity: .35; pointer-events: none; }  /* 반투명 실루엣 가이드 */
 .stage canvas { pointer-events: none; }
 
-.status { font-size: 13px; color: var(--sub); margin: 8px 0; overflow-wrap: anywhere; }
+.status { font-size: 13px; color: var(--sub); margin: 8px 0; }
 
 /* ===== 영상별 재생 컨트롤 ===== */
 .vctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
@@ -78,23 +60,20 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
 .vctl .time { font-size: 12px; color: var(--sub); font-variant-numeric: tabular-nums; min-width: 92px; text-align: right; }
 
 /* ===== 스윙 단계 칩 ===== */
-.chips { position: relative; display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
 .chip {
   border: 1px solid var(--line); background: var(--card); color: var(--ink);
-  padding: 7px 12px; border-radius: 99px; font-size: 13px; cursor: pointer; font-family: inherit;
+  padding: 7px 12px; border-radius: 99px; font-size: 13px; cursor: pointer;
 }
 .chip.bad { border-color: var(--bad); }
 .chip.on  { background: var(--turf); border-color: var(--turf); color: #fff; }
 
 /* ===== 하단 피드백 카드 ===== */
 .card {
-  position: fixed; left: calc(12px + var(--sal)); right: calc(12px + var(--sar)); bottom: calc(12px + var(--sab));
-  max-width: 760px; margin: 0 auto;
+  position: fixed; left: 12px; right: 12px; bottom: 12px; max-width: 760px; margin: 0 auto;
   background: var(--card); border: 2px solid var(--line); border-radius: 14px;
   padding: 12px 14px; font-size: 15px; line-height: 1.5; box-shadow: 0 6px 24px rgba(0, 0, 0, .25);
-  max-height: 38vh; max-height: 38svh; overflow-y: auto; /* 피드백이 길어져도 화면을 다 가리지 않게 */
-  overscroll-behavior: contain;
-  z-index: 10;
+  max-height: 38vh; overflow-y: auto; /* 피드백이 길어져도 화면을 다 가리지 않게 */
 }
 .card small { color: var(--sub); font-size: 13px; } /* 미스샷 안내 */
 .card.bad { border-color: var(--bad); }
@@ -109,6 +88,56 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
 .adjust-row input[type=range] { flex: 1 1 160px; min-width: 120px; accent-color: var(--turf); }
 .adjust-hint { margin: 8px 0 0; font-size: 12px; color: var(--sub); }
 
+/* ===== 모바일 전용 요소: 데스크톱에서는 숨김 ===== */
+.sizebar { display: none; }   /* 영상 크기 조절 (640px 이하에서만 표시) */
+#flipBtn { display: none; }   /* 전면/후면 카메라 전환 (터치 기기에서만 표시) */
+
+/* =====================================================================
+   터치/모바일 공통 (폭 640px 이하 또는 터치가 주 입력인 폰·태블릿, 가로/세로 모두)
+   데스크톱(마우스 주 입력 + 넓은 화면)에는 적용되지 않는다.
+   ===================================================================== */
+@media (max-width: 640px), (pointer: coarse) {
+  :root {
+    color-scheme: light dark; /* 슬라이더·파일 선택 등 기본 컨트롤도 다크모드를 따름 */
+    /* 안전 영역(노치·상태바·홈 인디케이터). iOS 는 env() 를, Android(Capacitor 8 System Bars)는 주입되는 --safe-area-inset-* 를 사용 */
+    --sat: max(env(safe-area-inset-top, 0px),    var(--safe-area-inset-top, 0px));
+    --sab: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+    --sal: max(env(safe-area-inset-left, 0px),   var(--safe-area-inset-left, 0px));
+    --sar: max(env(safe-area-inset-right, 0px),  var(--safe-area-inset-right, 0px));
+  }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    /* 아래 여백 = 하단 고정 피드백 카드 높이(--card-h, app.js 가 측정) + 여유 + 홈 인디케이터 */
+    padding: calc(12px + var(--sat)) calc(12px + var(--sar)) calc(var(--card-h, 160px) + 28px + var(--sab)) calc(12px + var(--sal));
+    font-family: "Pretendard", "Noto Sans KR", system-ui, -apple-system, sans-serif;
+    touch-action: manipulation;              /* 더블탭 확대 방지 (버튼을 빨리 연타해도 화면이 확대되지 않음) */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;             /* 당겨서 튕기는 효과 제거 (앱 느낌) */
+  }
+  .seg button, .btn, .chip { font-family: inherit; }
+  /* 버튼류는 길게 눌러도 글자 선택/미리보기 메뉴가 뜨지 않게 */
+  button, .seg, .chip, .stage, .vctl, label.btn {
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  .pane { min-width: 0; }                 /* grid 칸이 내용(컨트롤) 때문에 밀려 넓어지는 것 방지 */
+  .stage { max-height: 62svh; }           /* svh = 주소창이 보이는 상태의 화면 높이 (미지원 기기는 기본 62vh 유지) */
+  .chips { position: relative; }          /* 선택된 칩 자동 스크롤(ui.js)에서 offsetLeft 기준 */
+  .status { overflow-wrap: anywhere; }
+  .card {
+    left: calc(12px + var(--sal)); right: calc(12px + var(--sar)); bottom: calc(12px + var(--sab));
+    max-height: 38svh; overscroll-behavior: contain; z-index: 10;
+  }
+  #flipBtn { display: inline-block; }
+}
+
+/* ===== 터치 화면: 손가락으로 누르기 편한 최소 크기 (권장 44px 안팎) ===== */
+@media (pointer: coarse) {
+  .btn, .seg button, .chip { min-height: 44px; }
+  .btn.sm { min-height: 40px; }
+  .seg.sm button { min-height: 36px; }
+  .vctl .seek, .adjust-row input[type=range] { min-height: 28px; }
+}
+
 /* =====================================================================
    모바일 (폭 640px 이하, 세로 화면)
    - 두 영상을 나란히 두어 스크롤 없이 바로 비교
@@ -122,18 +151,38 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
   /* 화면 순서(모바일): 상단 설정 → 영상 → 단계 칩 → 미세 조정 → 상태 → 분석하기/재생 모드
      분석이 끝나면 영상 바로 아래 칩으로 단계를 넘겨 볼 수 있게 (피드백 카드가 아래를 덮고 있어도 손이 닿음) */
   body { display: flex; flex-direction: column; }
-  .topbar { order: 0; } .players { order: 1; } .chips { order: 2; }
-  .adjust { order: 3; } .status { order: 4; } .actions { order: 5; }
+  .topbar { order: 0; } .sizebar { order: 1; } .players { order: 2; } .chips { order: 3; }
+  .adjust { order: 4; } .status { order: 5; } .actions { order: 6; }
 
+  /* 비교 영상 크기 조절 바 */
+  .sizebar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; font-size: 13px; color: var(--sub); }
+  .sizebar .seg { flex: 0 1 240px; display: flex; }
+  .sizebar .seg button { flex: 1 1 0; min-width: 0; }
+
+  .ext { display: none; }
   .controls > .seg { display: flex; width: 100%; }
   .controls > .seg button { flex: 1 1 0; padding-left: 6px; padding-right: 6px; min-width: 0; }
   .controls > .btn { flex: 1 1 auto; text-align: center; }
 
-  /* 영상 나란히. 프로 영상(정사각형 등)과 내 영상(세로)의 비율이 달라도 두 칸 높이를 같게 맞춰
-     재생 컨트롤이 좌우로 나란히 정렬되게 한다. (video/canvas 모두 object-fit: contain 이라 남는 곳은 검은 여백,
-     스켈레톤 좌표는 그대로 일치) index.html 의 인라인 aspect-ratio(fitStageToVideo)보다 우선하도록 !important */
-  .players { gap: 8px; }
-  .stage { aspect-ratio: 3 / 4 !important; max-height: none; border-radius: 8px; }
+  /* 영상 나란히. 각 영상 칸의 높이는 영상 원본 비율을 따라감(ui.js fitStageToVideo 가 칸 비율을 지정)
+     → 정사각형/4:5/세로 영상 모두 위아래 검은 여백 없이 칸에 꽉 맞음. 칸 폭은 화면 반쪽으로 고정이라 더 커지지 않음 */
+  .players { gap: 8px; align-items: start; }
+  .stage { border-radius: 8px; }
+
+  /* 영상 크기 3단계. 칸 폭을 'min(칸 폭, 화면 높이 × 영상 비율)' 로 제한하면
+     비율은 그대로(검은 여백 없음) 유지하면서 높이가 화면 높이의 일정 비율을 넘지 않는다. (--ar: ui.js 가 넣는 영상 가로/세로 비율)
+     svh = 주소창이 보이는 상태의 화면 높이. 지원 안 하는 구형 WebView 는 vh 줄이 적용됨 */
+  /* 작게: 두 영상 나란히, 높이 화면의 26% 이내 → 아래 컨트롤/단계 버튼/피드백을 한 화면에서 같이 볼 때 */
+  .players[data-size="s"] .stage { width: min(100%, calc(26vh * var(--ar, .5625))); width: min(100%, calc(26svh * var(--ar, .5625))); }
+  /* 보통: 두 영상 나란히, 칸 폭 = 화면 반쪽 (기본) */
+  /* 크게: 위아래 한 줄씩, 칸 폭 = 화면 폭 (높이는 화면의 56% 이내) → 자세 디테일을 자세히 볼 때 */
+  .players[data-size="l"] { grid-template-columns: 1fr; gap: 14px; }
+  .players[data-size="l"] .stage { width: min(100%, calc(56vh * var(--ar, .5625))); width: min(100%, calc(56svh * var(--ar, .5625))); }
+  /* 크게 모드는 영상이 길어서 단계 버튼이 화면 밖으로 밀리므로, 스크롤해도 맨 위에 붙어 있게 */
+  .players[data-size="l"] ~ .chips {
+    position: sticky; top: 0; z-index: 6; background: var(--bg);
+    padding-top: calc(6px + var(--sat)); padding-bottom: 6px; margin-top: 0; margin-bottom: 6px;
+  }
 
   /* 영상별 컨트롤: [▶ ......... 스켈레톤] / [배속 5개] / [재생바] / [시간] */
   .vctl { gap: 6px 4px; }
@@ -164,12 +213,4 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
   /* 분석 전(안내 문구만 있을 때)에는 카드를 숨겨 '분석하기' 버튼이 가려지지 않게 함.
      분석 후 ui.js 가 .ok/.bad 클래스를 붙이면 나타남 */
   .card:not(.ok):not(.bad) { display: none; }
-}
-
-/* ===== 터치 화면: 손가락으로 누르기 편한 최소 크기 (권장 44px 안팎) ===== */
-@media (pointer: coarse) {
-  .btn, .seg button, .chip { min-height: 44px; }
-  .btn.sm { min-height: 40px; }
-  .seg.sm button { min-height: 36px; }
-  .vctl .seek, .adjust-row input[type=range] { min-height: 28px; }
 }
