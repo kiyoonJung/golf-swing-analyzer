@@ -21,15 +21,6 @@
 
 웹 코드(`index.html`, `src/`, `assets/`)를 고친 뒤에는 `npm run sync` 로 앱에 반영합니다.
 
-## 모바일 전용 기능 / 데스크톱 보호
-- **영상 크기 조절(작게/보통/크게)**: 화면 폭 640px 이하에서만 보이는 조절 바. 선택은 기억됨.
-  - 작게: 두 영상 나란히, 높이는 화면의 26% 이내 (컨트롤·단계 버튼을 한 화면에서 같이 볼 때)
-  - 보통: 두 영상 나란히 (기본)
-  - 크게: 위아래로 한 줄씩 화면 폭만큼, 높이는 화면의 56% 이내. 단계 버튼은 스크롤해도 맨 위에 고정
-  - 어느 단계든 영상 칸은 영상 원본 비율에 자동으로 맞춰져 검은 여백이 없음 (파일·프로 영상·라이브 카메라·전면/후면 전환 모두)
-- **데스크톱은 원본과 동일**: 위 기능과 모바일 CSS 는 전부 `@media (max-width: 640px)` 또는 `(pointer: coarse)` 안에 있어
-  마우스 주 입력의 넓은 화면에는 적용되지 않습니다. 원본 zip 과 같은 조건(1100/1440/800px, 라이트/다크)에서 화면을 캡처해 픽셀 비교했을 때 차이가 없었습니다.
-
 ## 무엇이 바뀌었나
 | 파일 | 내용 |
 |---|---|
@@ -43,32 +34,14 @@
 기준 JSON 을 만든 환경과 같도록 MediaPipe 는 **0.5.1675469404 / modelComplexity 2** 를 그대로 유지했습니다. 버전을 올리면 기준값과 비교가 어긋날 수 있습니다.
 
 ## 웹(Cloudflare Workers)으로 배포
+폰 브라우저에서 주소만 열어 쓰는 방식입니다. 앱 빌드 없이 모바일 화면 개선을 바로 확인할 수 있습니다.
 
-### 방법 A. 깃 연결 (푸시하면 자동 배포)
-1. GitHub 에 저장소를 만들고 이 폴더를 올립니다. (영상 권리가 정리되기 전에는 **비공개(private)** 저장소 권장)
-2. Cloudflare 대시보드 → Workers & Pages → `golf-swing-analyzer` Worker → Settings → Builds → Connect
-3. 저장소와 브랜치(`main`)를 고르고 아래처럼 설정
-   - Build command: `npm run build`
-   - Deploy command: `npx wrangler deploy` (기본값)
-   - 프로젝트가 저장소 루트가 아니면 Advanced 의 Path 에 폴더 지정
-4. 커밋을 푸시하면 빌드 → 배포가 자동으로 실행됩니다. 진행 상황은 Deployments 탭의 build history 에서 확인.
-
-`package-lock.json` 은 지우지 말고 함께 커밋하세요. `.node-version`(22)은 빌드 서버의 Node 버전을 맞추기 위한 파일입니다.
-
-### 25 MiB 제한 (Cloudflare Workers)
-Workers 는 정적 파일 하나당 25 MiB 까지만 올릴 수 있는데, MediaPipe 모델 `pose_landmark_heavy.tflite` 는 26.4 MiB 라 한도를 넘습니다.
-그래서 **웹 빌드(`npm run build`)는 25 MiB 를 넘는 파일을 `www/` 에서 빼고**, 실행 시 그 파일만 CDN(jsDelivr)에서 받습니다
-(어떤 파일인지는 빌드가 만드는 `vendor/mediapipe-pose/local-files.json` 에 적힘). 나머지 MediaPipe 파일은 그대로 내장됩니다.
-**앱 빌드(`npm run sync` / `ios` / `android`)는 `build:native` 를 써서 전부 내장**하므로 오프라인에서도 동작합니다.
-Cloudflare 의 Build command 는 그대로 `npm run build` 입니다.
-
-### 방법 B. 터미널에서 직접 배포
     npm install
-    npx wrangler login
-    npm run deploy
+    npx wrangler login        # 처음 한 번, 브라우저에서 Cloudflare 로그인
+    npm run deploy            # MediaPipe 포함 www/ 를 만들고 업로드
 
-- `wrangler.jsonc` 의 `name` 이 기존 Worker 이름(`golf-swing-analyzer`)과 같아서 기존 주소가 새 버전으로 교체됩니다.
-- 폰에서 안 바뀌어 보이면 캐시 때문일 수 있으니 새로고침(또는 시크릿 탭)으로 확인하세요.
+- `wrangler.jsonc` 의 `name` 은 테스트용(`golf-swing-analyzer-test`)이라 **기존 주소는 건드리지 않고** 별도 주소가 생깁니다. 확인이 끝난 뒤 기존 주소를 교체하려면 `name` 을 `golf-swing-analyzer` 로 바꾸고 다시 배포하세요.
+- 배포 후 폰에서 접속해 안 바뀌어 보이면 브라우저 캐시 때문일 수 있으니 새로고침(또는 시크릿 탭)으로 확인하세요.
 
 ## 웹 버전(Workers)도 같이 쓸 때
 `npm run build` 가 프로젝트 루트에 `vendor/mediapipe-pose/` 도 만듭니다. 웹에 이 폴더를 같이 배포하면 CDN 없이 동작하고, 배포하지 않아도 CDN 으로 대체되어 동작합니다.

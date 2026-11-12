@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#EEF1E8" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121A14" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
   <title>골프 스윙 포즈 분석</title>
   <link rel="stylesheet" href="src/css/style.css">
   <!-- MediaPipe Pose 는 src/js/mediapipe.js 가 처음 분석할 때 불러옴 (앱: vendor/mediapipe-pose 로컬 파일 우선, 없으면 CDN) -->
@@ -30,7 +31,7 @@
 
     <!-- 파일 업로드 모드 도구 -->
     <div class="controls" id="filePanel">
-      <label class="btn">내 영상 선택<span class="ext"> (.mp4)</span>
+      <label class="btn">내 영상 선택
         <input id="userFile" type="file" accept="video/*" hidden>
       </label>
     </div>
@@ -45,17 +46,7 @@
   </header>
 
   <!-- 중단: 듀얼 비디오 플레이어 -->
-  <!-- 모바일 전용(CSS 로 640px 이하에서만 보임): 비교 영상 크기 조절 -->
-  <div class="sizebar" role="group" aria-label="비교 영상 크기">
-    <span>영상 크기</span>
-    <div class="seg sm" id="sizeSeg">
-      <button type="button" data-size="s">작게</button>
-      <button type="button" data-size="m" class="on">보통</button>
-      <button type="button" data-size="l">크게</button>
-    </div>
-  </div>
-
-  <main class="players" data-size="m">
+  <main class="players">
     <section class="pane">
       <h2>프로 레퍼런스</h2>
       <div class="stage" id="proStage">

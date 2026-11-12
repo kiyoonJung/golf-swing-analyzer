@@ -9,9 +9,9 @@
   },
   "scripts": {
     "build": "node scripts/build-www.mjs",
-    "build:native": "node scripts/build-www.mjs --native",
     "build:slim": "node scripts/build-www.mjs --slim",
-    "sync": "npm run build:native && cap sync",
+    "build:web": "node scripts/build-www.mjs --no-heavy",
+    "sync": "npm run build && cap sync",
     "ios": "npm run sync && cap open ios",
     "android": "npm run sync && cap open android",
     "patch-native": "node scripts/patch-native.mjs",
