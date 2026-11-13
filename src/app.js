@@ -17,34 +17,48 @@ const $ = (id) => document.getElementById(id);
 const proVideo = $('proVideo');
 const userVideo = $('userVideo');
 
-// ===== 모바일 전용 동작 (화면 폭 640px 이하 = style.css 의 모바일 레이아웃과 같은 기준) =====
-// 데스크톱은 기존 동작을 그대로 둔다.
-const mobileMQ = window.matchMedia('(max-width: 640px)');
+// ===== 모바일 전용 동작 (style.css 의 '모바일 레이아웃'과 같은 기준) =====
+// 세로 폰(폭 640px 이하) + 가로 폰(높이 500px 이하 + 터치). 데스크톱은 기존 동작을 그대로 둔다.
+const mobileMQ = window.matchMedia('(max-width: 640px), (max-height: 500px) and (pointer: coarse)');
+const proStage = $('proStage');
+const userStage = $('userStage');
 
-// 영상 칸을 영상 원본 비율(가로/세로/정사각형)에 자동으로 맞춤 → 검은 여백이 생기지 않음.
+// 영상 칸을 영상 원본 비율(가로/세로/정사각형)에 자동으로 맞춤 → 위아래/좌우 검은 여백이 생기지 않음.
 // 파일 업로드·프로 영상 교체는 기존 코드(setUserVideo 등)가 이미 처리하고,
 // 여기서는 라이브 카메라 켜기·전면/후면 전환처럼 영상 크기가 나중에 정해지거나 바뀌는 경우를 모바일에서 보완한다.
-// 'resize' 는 <video> 의 videoWidth/Height 가 바뀔 때 발생 (카메라 전환 등)
-for (const v of [proVideo, userVideo]) {
-  const fit = () => { if (mobileMQ.matches) fitStageToVideo(v); };
-  v.addEventListener('loadedmetadata', fit);
-  v.addEventListener('resize', fit);
-}
-// 폰을 돌려 모바일 폭으로 바뀌었을 때도 다시 맞춤
-mobileMQ.addEventListener('change', () => { if (mobileMQ.matches) [proVideo, userVideo].forEach(fitStageToVideo); });
+// (fitStageToVideo 는 칸 비율과 함께 CSS 변수 --ar 도 넣어서, CSS 가 '화면 높이를 넘지 않는 폭'을 계산하게 함)
 
-// 비교 영상 크기: 작게(s) / 보통(m, 두 영상 나란히) / 크게(l, 위아래로 한 줄씩 크게). 선택은 기억해 둠.
-// 실제 크기 규칙은 style.css 의 모바일 영역(.players[data-size=...])에 있고, 데스크톱에서는 조절 바 자체가 숨겨져 있음.
-const SIZE_KEY = 'swingfixer.viewSize';
-function setViewSize(size) {
-  document.querySelector('.players').dataset.size = size;
-  document.querySelectorAll('#sizeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.size === size));
-  try { localStorage.setItem(SIZE_KEY, size); } catch { /* 저장소를 못 써도 동작에는 영향 없음 */ }
+/** 내 영상 칸 정리: 영상이 아직 없으면 프로 영상 칸과 같은 모양의 안내 칸(.empty)으로, 있으면 영상 비율에 맞춤 */
+function syncUserStage() {
+  if (!mobileMQ.matches) return;                 // 데스크톱은 건드리지 않음
+  const empty = !userVideo.videoWidth;
+  userStage.classList.toggle('empty', empty);
+  if (empty) {
+    // 영상이 없는 동안 큰 검은 상자가 보이지 않도록, 프로 영상 칸과 같은 크기로 맞춤 (프로 영상이 아직 없으면 기본 비율)
+    const ar = proStage.style.getPropertyValue('--ar');
+    if (ar) { userStage.style.setProperty('--ar', ar); userStage.style.aspectRatio = proStage.style.aspectRatio; }
+  } else {
+    fitStageToVideo(userVideo);
+  }
 }
-document.querySelectorAll('#sizeSeg button').forEach((b) => { b.onclick = () => setViewSize(b.dataset.size); });
-let savedSize = 'm';
-try { savedSize = localStorage.getItem(SIZE_KEY) || 'm'; } catch { /* 무시 */ }
-setViewSize(['s', 'm', 'l'].includes(savedSize) ? savedSize : 'm');
+
+proVideo.addEventListener('loadedmetadata', () => { if (mobileMQ.matches) { fitStageToVideo(proVideo); syncUserStage(); } });
+proVideo.addEventListener('resize', () => { if (mobileMQ.matches) { fitStageToVideo(proVideo); syncUserStage(); } });
+// 'resize' = <video> 의 videoWidth/Height 가 바뀔 때(카메라 전환 등), 'emptied' = 영상/카메라가 해제될 때
+for (const ev of ['loadedmetadata', 'resize', 'emptied']) userVideo.addEventListener(ev, syncUserStage);
+
+// 폰을 돌리거나 창 크기가 바뀌어 모바일 ↔ 데스크톱 기준이 바뀔 때
+mobileMQ.addEventListener('change', () => {
+  if (mobileMQ.matches) {
+    if (proVideo.videoWidth) fitStageToVideo(proVideo);
+    syncUserStage();
+  } else if (!userVideo.videoWidth) {
+    // 데스크톱으로 돌아가면 빈 칸의 모바일용 비율을 지워 원래 기본 비율(9:16)로
+    userStage.classList.remove('empty');
+    userStage.style.removeProperty('aspect-ratio'); userStage.style.removeProperty('--ar');
+  }
+});
+syncUserStage();
 const guideImg = $('guideImg');
 
 // ===== 앱 상태 =====

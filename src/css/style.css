@@ -89,7 +89,6 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
 .adjust-hint { margin: 8px 0 0; font-size: 12px; color: var(--sub); }
 
 /* ===== 모바일 전용 요소: 데스크톱에서는 숨김 ===== */
-.sizebar { display: none; }   /* 영상 크기 조절 (640px 이하에서만 표시) */
 #flipBtn { display: none; }   /* 전면/후면 카메라 전환 (터치 기기에서만 표시) */
 
 /* =====================================================================
@@ -139,11 +138,13 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
 }
 
 /* =====================================================================
-   모바일 (폭 640px 이하, 세로 화면)
-   - 두 영상을 나란히 두어 스크롤 없이 바로 비교
+   모바일 레이아웃: 세로 폰(폭 640px 이하) + 가로 폰(높이 500px 이하 & 터치)
+   - 두 영상을 나란히 두어 바로 비교
+   - 영상 칸은 영상 원본 비율에 자동으로 맞춰지고(검은 여백 없음), 화면 높이를 넘지 않도록 폭을 제한
    - 세그먼트/버튼은 한 줄 가득, 칩은 가로 스크롤, 재생 컨트롤은 세로로 쌓음
+   데스크톱(마우스 + 넓은 화면)에는 적용되지 않는다.
    ===================================================================== */
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
   body { padding-left: calc(10px + var(--sal)); padding-right: calc(10px + var(--sar)); }
   h1 { font-size: 18px; margin: 2px 0 10px; }
   h2 { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -151,37 +152,28 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
   /* 화면 순서(모바일): 상단 설정 → 영상 → 단계 칩 → 미세 조정 → 상태 → 분석하기/재생 모드
      분석이 끝나면 영상 바로 아래 칩으로 단계를 넘겨 볼 수 있게 (피드백 카드가 아래를 덮고 있어도 손이 닿음) */
   body { display: flex; flex-direction: column; }
-  .topbar { order: 0; } .sizebar { order: 1; } .players { order: 2; } .chips { order: 3; }
-  .adjust { order: 4; } .status { order: 5; } .actions { order: 6; }
-
-  /* 비교 영상 크기 조절 바 */
-  .sizebar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; font-size: 13px; color: var(--sub); }
-  .sizebar .seg { flex: 0 1 240px; display: flex; }
-  .sizebar .seg button { flex: 1 1 0; min-width: 0; }
+  .topbar { order: 0; } .players { order: 1; } .chips { order: 2; }
+  .adjust { order: 3; } .status { order: 4; } .actions { order: 5; }
 
   .ext { display: none; }
   .controls > .seg { display: flex; width: 100%; }
   .controls > .seg button { flex: 1 1 0; padding-left: 6px; padding-right: 6px; min-width: 0; }
   .controls > .btn { flex: 1 1 auto; text-align: center; }
 
-  /* 영상 나란히. 각 영상 칸의 높이는 영상 원본 비율을 따라감(ui.js fitStageToVideo 가 칸 비율을 지정)
-     → 정사각형/4:5/세로 영상 모두 위아래 검은 여백 없이 칸에 꽉 맞음. 칸 폭은 화면 반쪽으로 고정이라 더 커지지 않음 */
+  /* 영상 나란히. 칸 비율은 영상 원본 비율(ui.js fitStageToVideo 가 aspect-ratio 와 --ar 를 넣음)이라 검은 여백이 없고,
+     칸 폭을 'min(칸 폭, 화면 높이 × 영상 비율)' 로 제한해 아주 길쭉한 영상도 화면 높이를 넘지 않는다.
+     svh = 주소창이 보이는 상태의 화면 높이 (미지원 구형 WebView 는 바로 위 vh 줄이 적용됨) */
   .players { gap: 8px; align-items: start; }
-  .stage { border-radius: 8px; }
-
-  /* 영상 크기 3단계. 칸 폭을 'min(칸 폭, 화면 높이 × 영상 비율)' 로 제한하면
-     비율은 그대로(검은 여백 없음) 유지하면서 높이가 화면 높이의 일정 비율을 넘지 않는다. (--ar: ui.js 가 넣는 영상 가로/세로 비율)
-     svh = 주소창이 보이는 상태의 화면 높이. 지원 안 하는 구형 WebView 는 vh 줄이 적용됨 */
-  /* 작게: 두 영상 나란히, 높이 화면의 26% 이내 → 아래 컨트롤/단계 버튼/피드백을 한 화면에서 같이 볼 때 */
-  .players[data-size="s"] .stage { width: min(100%, calc(26vh * var(--ar, .5625))); width: min(100%, calc(26svh * var(--ar, .5625))); }
-  /* 보통: 두 영상 나란히, 칸 폭 = 화면 반쪽 (기본) */
-  /* 크게: 위아래 한 줄씩, 칸 폭 = 화면 폭 (높이는 화면의 56% 이내) → 자세 디테일을 자세히 볼 때 */
-  .players[data-size="l"] { grid-template-columns: 1fr; gap: 14px; }
-  .players[data-size="l"] .stage { width: min(100%, calc(56vh * var(--ar, .5625))); width: min(100%, calc(56svh * var(--ar, .5625))); }
-  /* 크게 모드는 영상이 길어서 단계 버튼이 화면 밖으로 밀리므로, 스크롤해도 맨 위에 붙어 있게 */
-  .players[data-size="l"] ~ .chips {
-    position: sticky; top: 0; z-index: 6; background: var(--bg);
-    padding-top: calc(6px + var(--sat)); padding-bottom: 6px; margin-top: 0; margin-bottom: 6px;
+  .stage {
+    border-radius: 8px; max-height: none;
+    width: min(100%, calc(62vh * var(--ar, .5625))); width: min(100%, calc(62svh * var(--ar, .5625)));
+  }
+  /* 내 영상이 아직 없을 때: 큰 검은 상자 대신 프로 영상 칸과 같은 크기의 안내 칸 (app.js 가 .empty 와 칸 비율을 지정) */
+  .stage.empty { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
+  .stage.empty::after {
+    content: "내 영상이\A여기에 표시돼요"; white-space: pre-line;
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 8px; font-size: 12px; line-height: 1.5; color: var(--sub); pointer-events: none;
   }
 
   /* 영상별 컨트롤: [▶ ......... 스켈레톤] / [배속 5개] / [재생바] / [시간] */
@@ -196,7 +188,7 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
   /* 분석하기 / 재생 모드 */
   .actions .btn.main { flex: 1 1 100%; min-height: 48px; font-size: 16px; font-weight: 600; }
 
-  /* 단계 칩: 가로 스크롤 한 줄 (선택된 칩은 app/ui.js 가 가운데로 맞춤) */
+  /* 단계 칩: 가로 스크롤 한 줄 (선택된 칩은 ui.js 가 가운데로 맞춤) */
   .chips {
     flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
     scrollbar-width: none; scroll-snap-type: x proximity;
@@ -213,4 +205,59 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
   /* 분석 전(안내 문구만 있을 때)에는 카드를 숨겨 '분석하기' 버튼이 가려지지 않게 함.
      분석 후 ui.js 가 .ok/.bad 클래스를 붙이면 나타남 */
   .card:not(.ok):not(.bad) { display: none; }
+}
+
+/* =====================================================================
+   가로 모드 (폰을 눕혔을 때): 화면 높이가 낮아서 영상 높이를 최대한 확보한다.
+   왼쪽 = 두 영상(스크롤해도 화면에 고정) / 오른쪽 = 설정·분석하기·단계 칩·피드백·미세 조정(이 칸만 스크롤)
+   ===================================================================== */
+@media (max-height: 500px) and (pointer: coarse) and (orientation: landscape) {
+  :root { --land-reserve: 146px; }   /* 영상 위·아래로 쓰는 높이(제목 + 재생 컨트롤 + 여백). 영상 높이 = 화면 높이 - 이 값 */
+  body {
+    display: grid; align-content: start; column-gap: 10px; row-gap: 8px;
+    grid-template-columns: minmax(0, 1fr) clamp(230px, 36vw, 300px);
+    grid-template-rows: repeat(6, auto) 1fr;          /* 6칸(설정~미세조정) + 남는 높이를 흡수하는 마지막 칸 */
+    padding: calc(6px + var(--sat)) calc(10px + var(--sar)) calc(8px + var(--sab)) calc(10px + var(--sal));
+  }
+  h1 { display: none; }
+  .btn, .seg button, .chip { min-height: 38px; }
+  .btn.sm { min-height: 34px; }
+  .seg.sm button { min-height: 30px; }
+
+  .players { grid-column: 1; grid-row: 1 / 8; position: sticky; top: calc(6px + var(--sat)); align-self: start; }
+  .topbar  { grid-column: 2; grid-row: 1; }
+  .actions { grid-column: 2; grid-row: 2; }
+  .status  { grid-column: 2; grid-row: 3; margin: 0; font-size: 12px; }
+  .chips   { grid-column: 2; grid-row: 4; margin: 0; padding: 2px 0; }
+  .card    { grid-column: 2; grid-row: 5; }
+  .adjust  { grid-column: 2; grid-row: 6; margin: 0; }
+
+  /* 영상 칸: 화면 높이에서 제목/컨트롤 높이를 뺀 값을 넘지 않게 (비율은 그대로) */
+  .stage {
+    width: min(100%, calc((100vh - var(--land-reserve)) * var(--ar, .5625)));
+    width: min(100%, calc((100svh - var(--land-reserve)) * var(--ar, .5625)));
+  }
+
+  /* 영상별 컨트롤을 낮게: [▶ 시간 스켈레톤] / [배속] / [재생바] */
+  .vctl { gap: 4px; margin-top: 4px; }
+  .vctl .time { order: 2; flex: 1 1 0; }
+  .vctl .skel { order: 3; margin-left: 0; }
+  .vctl .speeds { order: 4; }
+  .vctl .speeds button { padding: 5px 0; }
+  .vctl .seek { order: 5; height: 22px; min-height: 22px; }
+
+  /* 피드백 카드는 오른쪽 칸 안에서 일반 요소로 (하단 고정 해제) */
+  .card { position: static; max-width: none; max-height: none; margin: 0; box-shadow: none; z-index: auto; font-size: 13px; }
+
+  /* 좁은 칸에서도 재생 모드 글자가 한 줄로 */
+  .actions .seg button { font-size: 12px; padding-left: 2px; padding-right: 2px; white-space: nowrap; }
+
+  /* 분석이 끝나면(피드백 카드에 .ok/.bad 가 붙으면) 결과 쪽을 위로, 자주 안 바꾸는 설정은 아래로.
+     :has() 를 지원하지 않는 구형 기기에서는 이 규칙이 무시되고 위의 기본 순서(설정이 위)로 보인다. */
+  body:has(.card.ok, .card.bad) .actions { grid-row: 1; }
+  body:has(.card.ok, .card.bad) .status  { grid-row: 2; }
+  body:has(.card.ok, .card.bad) .chips   { grid-row: 3; }
+  body:has(.card.ok, .card.bad) .card    { grid-row: 4; }
+  body:has(.card.ok, .card.bad) .adjust  { grid-row: 5; }
+  body:has(.card.ok, .card.bad) .topbar  { grid-row: 6; }
 }
