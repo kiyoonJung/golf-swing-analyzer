@@ -95,7 +95,7 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
    터치/모바일 공통 (폭 640px 이하 또는 터치가 주 입력인 폰·태블릿, 가로/세로 모두)
    데스크톱(마우스 주 입력 + 넓은 화면)에는 적용되지 않는다.
    ===================================================================== */
-@media (max-width: 640px), (pointer: coarse) {
+@media (max-width: 640px), (pointer: coarse), (hover: none) {
   :root {
     color-scheme: light dark; /* 슬라이더·파일 선택 등 기본 컨트롤도 다크모드를 따름 */
     /* 안전 영역(노치·상태바·홈 인디케이터). iOS 는 env() 를, Android(Capacitor 8 System Bars)는 주입되는 --safe-area-inset-* 를 사용 */
@@ -144,7 +144,7 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
    - 세그먼트/버튼은 한 줄 가득, 칩은 가로 스크롤, 재생 컨트롤은 세로로 쌓음
    데스크톱(마우스 + 넓은 화면)에는 적용되지 않는다.
    ===================================================================== */
-@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse), (max-height: 500px) and (hover: none) {
   body { padding-left: calc(10px + var(--sal)); padding-right: calc(10px + var(--sar)); }
   h1 { font-size: 18px; margin: 2px 0 10px; }
   h2 { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -167,6 +167,13 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
   .stage {
     border-radius: 8px; max-height: none;
     width: min(100%, calc(62vh * var(--ar, .5625))); width: min(100%, calc(62svh * var(--ar, .5625)));
+  }
+  /* 내 영상 칸: 프로 영상 칸과 같은 높이로 맞추고(app.js 가 프로 칸 높이를 --match-h 로 알려 줌), 폭은 내 영상 비율대로.
+     → PC 화면처럼 프로 영상이 기준 크기가 되고, 내 영상이 더 크거나 길어도 프로보다 커지지 않는다.
+     폭이 칸을 넘는 가로 영상은 칸 폭까지만(그땐 프로보다 낮아짐) */
+  #userStage {
+    width: min(100%, calc(var(--match-h, 62vh) * var(--ar, .5625)));
+    width: min(100%, calc(var(--match-h, 62svh) * var(--ar, .5625)));
   }
   /* 내 영상이 아직 없을 때: 큰 검은 상자 대신 프로 영상 칸과 같은 크기의 안내 칸 (app.js 가 .empty 와 칸 비율을 지정) */
   .stage.empty { background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
@@ -211,7 +218,7 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
    가로 모드 (폰을 눕혔을 때): 화면 높이가 낮아서 영상 높이를 최대한 확보한다.
    왼쪽 = 두 영상(스크롤해도 화면에 고정) / 오른쪽 = 설정·분석하기·단계 칩·피드백·미세 조정(이 칸만 스크롤)
    ===================================================================== */
-@media (max-height: 500px) and (pointer: coarse) and (orientation: landscape) {
+@media (max-height: 500px) and (orientation: landscape) and (pointer: coarse), (max-height: 500px) and (orientation: landscape) and (hover: none) {
   :root { --land-reserve: 146px; }   /* 영상 위·아래로 쓰는 높이(제목 + 재생 컨트롤 + 여백). 영상 높이 = 화면 높이 - 이 값 */
   body {
     display: grid; align-content: start; column-gap: 10px; row-gap: 8px;
@@ -236,6 +243,11 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
   .stage {
     width: min(100%, calc((100vh - var(--land-reserve)) * var(--ar, .5625)));
     width: min(100%, calc((100svh - var(--land-reserve)) * var(--ar, .5625)));
+  }
+
+  #userStage {
+    width: min(100%, calc(var(--match-h, calc(100vh - var(--land-reserve))) * var(--ar, .5625)));
+    width: min(100%, calc(var(--match-h, calc(100svh - var(--land-reserve))) * var(--ar, .5625)));
   }
 
   /* 영상별 컨트롤을 낮게: [▶ 시간 스켈레톤] / [배속] / [재생바] */
