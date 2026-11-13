@@ -48,26 +48,13 @@ async function loadPoseLibrary() {
   throw new Error('MediaPipe Pose 를 불러오지 못했습니다. (앱: npm run build 로 vendor 폴더가 만들어졌는지 확인 / 웹: 네트워크 확인)');
 }
 
-const HEAVY = 'pose_landmark_heavy.tflite';
-
-/** 로컬(vendor)에 heavy 모델이 실제로 있는지 확인. 웹 배포(--no-heavy)에서는 없으므로 false */
-async function hasLocalHeavy() {
-  if (mpBase !== LOCAL_BASE) return false;   // 이미 CDN 으로 불러왔으면 로컬 확인 불필요
-  try {
-    const r = await fetch(`${LOCAL_BASE}/${HEAVY}`, { method: 'HEAD' });
-    return r.ok && !(r.headers.get('content-type') || '').includes('html');
-  } catch { return false; }
-}
-
 /** Pose 인스턴스를 한 번만 생성/초기화 */
 export async function initPose() {
   if (pose) return pose;
   await loadPoseLibrary();
-  const localHeavy = await hasLocalHeavy();   // 추가
 
   pose = new window.Pose({
-    // heavy 모델만 로컬에 없으면 CDN 에서, 나머지 파일은 기존대로 mpBase 에서
-    locateFile: (f) => (f === HEAVY && !localHeavy ? `${CDN_BASE}/${f}` : `${mpBase}/${f}`),
+    locateFile: (f) => `${remoteFiles.has(f) ? CDN_BASE : mpBase}/${f}`,
   });
   pose.setOptions({
     modelComplexity: 2,       // 가장 정확한 모델 (tools/extract_reference.py 와 동일해야 기준값과 비교가 맞음)
