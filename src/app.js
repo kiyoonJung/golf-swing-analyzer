@@ -19,21 +19,9 @@ const userVideo = $('userVideo');
 
 // ===== 모바일 전용 동작 (style.css 의 '모바일 레이아웃'과 같은 기준) =====
 // 세로 폰(폭 640px 이하) + 가로 폰(높이 500px 이하 + 터치). 데스크톱은 기존 동작을 그대로 둔다.
-const MOBILE_Q = '(max-width: 640px), (max-height: 500px) and (pointer: coarse), (max-height: 500px) and (hover: none)';
-const LAND_Q = '(max-height: 500px) and (orientation: landscape) and (pointer: coarse), (max-height: 500px) and (orientation: landscape) and (hover: none)';
-const mobileMQ = window.matchMedia(MOBILE_Q);
+const mobileMQ = window.matchMedia('(max-width: 640px), (max-height: 500px) and (pointer: coarse)');
 const proStage = $('proStage');
 const userStage = $('userStage');
-const playersEl = document.querySelector('.players');
-
-/** 프로 영상 칸의 높이를 CSS 변수 --match-h 로 알려 줌 → 내 영상 칸이 같은 높이로 맞춰짐 (모바일만, style.css #userStage) */
-function syncMatchHeight() {
-  if (!mobileMQ.matches) { playersEl.style.removeProperty('--match-h'); return; }
-  const h = proStage.getBoundingClientRect().height;
-  if (h > 1) playersEl.style.setProperty('--match-h', `${h.toFixed(1)}px`);
-}
-// 프로 칸 크기가 바뀔 때(프로 영상 교체, 화면 회전, 창 크기)마다 갱신
-new ResizeObserver(syncMatchHeight).observe(proStage);
 
 // 영상 칸을 영상 원본 비율(가로/세로/정사각형)에 자동으로 맞춤 → 위아래/좌우 검은 여백이 생기지 않음.
 // 파일 업로드·프로 영상 교체는 기존 코드(setUserVideo 등)가 이미 처리하고,
@@ -61,7 +49,6 @@ for (const ev of ['loadedmetadata', 'resize', 'emptied']) userVideo.addEventList
 
 // 폰을 돌리거나 창 크기가 바뀌어 모바일 ↔ 데스크톱 기준이 바뀔 때
 mobileMQ.addEventListener('change', () => {
-  syncMatchHeight();
   if (mobileMQ.matches) {
     if (proVideo.videoWidth) fitStageToVideo(proVideo);
     syncUserStage();
@@ -72,28 +59,6 @@ mobileMQ.addEventListener('change', () => {
   }
 });
 syncUserStage();
-syncMatchHeight();
-
-// ===== 진단용: 주소 끝에 ?debug=1 을 붙이면 화면 왼쪽 아래에 뷰포트/입력 방식/적용된 레이아웃을 표시 =====
-// (폰에서 가로 모드가 안 될 때 원인 확인용. 평소에는 아무 영향 없음)
-if (new URLSearchParams(location.search).has('debug')) {
-  const box = document.createElement('pre');
-  box.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:99;margin:0;padding:6px 8px;font:11px/1.45 monospace;background:rgba(0,0,0,.78);color:#9f9;border-radius:6px;pointer-events:none;white-space:pre-wrap;max-width:92vw';
-  document.body.appendChild(box);
-  const mq = (q) => window.matchMedia(q).matches;
-  const show = () => {
-    box.textContent = [
-      `창 ${innerWidth}x${innerHeight}  화면 ${screen.width}x${screen.height}`,
-      `방향: ${screen.orientation?.type ?? '(알 수 없음)'} / orientation:landscape=${mq('(orientation: landscape)')}`,
-      `pointer:coarse=${mq('(pointer: coarse)')} hover:none=${mq('(hover: none)')}`,
-      `모바일 레이아웃=${mobileMQ.matches}  가로 모드=${mq(LAND_Q)}`,
-      `body=${getComputedStyle(document.body).display}  match-h=${playersEl.style.getPropertyValue('--match-h') || '-'}`,
-    ].join('\n');
-  };
-  show();
-  addEventListener('resize', show); addEventListener('orientationchange', show);
-  mobileMQ.addEventListener('change', show);
-}
 const guideImg = $('guideImg');
 
 // ===== 앱 상태 =====
