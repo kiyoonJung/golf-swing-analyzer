@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const slim = process.argv.includes('--slim');
+const noHeavy = process.argv.includes('--no-heavy');
 const native = process.argv.includes('--native');
 const WORKERS_MAX = 25 * 1024 * 1024; // Cloudflare Workers 정적 파일 1개 최대 크기
 const r = (...p) => path.join(root, ...p);
@@ -49,7 +50,10 @@ if (slim) {
 if (!fs.existsSync(path.join(mpDst, 'pose_landmark_heavy.tflite'))) {
   console.warn('⚠ pose_landmark_heavy.tflite 가 없습니다. modelComplexity 2 를 쓰는 이 앱은 이 파일이 꼭 필요합니다. @mediapipe/pose 버전을 확인하세요.');
 }
-
+if (noHeavy) fs.rmSync(path.join(mpDst, 'pose_landmark_heavy.tflite'), { force: true });
+if (!noHeavy && !fs.existsSync(path.join(mpDst, 'pose_landmark_heavy.tflite'))) {
+  console.warn('⚠ pose_landmark_heavy.tflite 가 없습니다. ...');
+}
 // 2) www/
 const www = r('www');
 fs.rmSync(www, { recursive: true, force: true });
