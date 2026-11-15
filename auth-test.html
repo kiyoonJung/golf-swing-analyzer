@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>스윙픽서 · 로그인/저장 테스트</title>
+  <!-- 서버(Supabase) 연결이 되는지 확인하는 임시 테스트 페이지. 프로그램 본 화면에 붙이기 전에 여기서 먼저 시험한다. -->
+  <style>
+    :root { --bg:#EEF1E8; --ink:#17231B; --sub:#5B6B5F; --card:#fff; --line:#CBD3C4; --turf:#2F6B3A; --bad:#E5383B; }
+    @media (prefers-color-scheme: dark) { :root { --bg:#121A14; --ink:#E8EEE4; --sub:#9DB0A2; --card:#1B261E; --line:#2D3B31; --turf:#4E9A5C; } }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:14px; background:var(--bg); color:var(--ink); font-family:"Pretendard","Noto Sans KR",system-ui,sans-serif; }
+    main { max-width:560px; margin:0 auto; }
+    h1 { font-size:19px; margin:4px 0 12px; }
+    h2 { font-size:14px; margin:0 0 8px; color:var(--sub); }
+    section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; }
+    input { width:100%; padding:10px; margin-bottom:8px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--ink); font-size:15px; }
+    .row { display:flex; flex-wrap:wrap; gap:6px; }
+    button { padding:9px 13px; border:1px solid var(--line); border-radius:9px; background:var(--card); color:var(--ink); font-size:14px; cursor:pointer; }
+    button.main { background:var(--turf); border-color:var(--turf); color:#fff; }
+    #status { font-weight:600; }
+    #log { white-space:pre-wrap; font-size:13px; color:var(--sub); min-height:2.6em; }
+    #log.err { color:var(--bad); }
+    .rec { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 0; border-top:1px solid var(--line); font-size:13px; }
+    [hidden] { display:none !important; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>스윙픽서 · 로그인/저장 테스트</h1>
+
+  <section>
+    <h2>상태</h2>
+    <div id="status">확인 중…</div>
+    <div id="log"></div>
+  </section>
+
+  <section id="recoverBox" hidden>
+    <h2>새 비밀번호 설정 (재설정 메일 링크로 들어옴)</h2>
+    <input id="recoverPw" type="password" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password">
+    <button class="main" id="recoverBtn">새 비밀번호 저장</button>
+  </section>
+
+  <section id="authBox">
+    <h2>회원가입 / 로그인</h2>
+    <input id="email" type="email" placeholder="이메일" autocomplete="email">
+    <input id="pw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
+    <div class="row">
+      <button class="main" id="signInBtn">로그인</button>
+      <button id="signUpBtn">회원가입</button>
+      <button id="resetBtn">비밀번호 찾기(메일 보내기)</button>
+    </div>
+  </section>
+
+  <section id="userBox" hidden>
+    <h2>비밀번호 변경</h2>
+    <input id="curPw" type="password" placeholder="현재 비밀번호" autocomplete="current-password">
+    <input id="newPw" type="password" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password">
+    <div class="row">
+      <button id="changeBtn">비밀번호 변경</button>
+      <button id="signOutBtn">로그아웃</button>
+    </div>
+  </section>
+
+  <section id="dbBox" hidden>
+    <h2>기록 저장 테스트 (가짜 분석 결과)</h2>
+    <div class="row">
+      <button class="main" id="saveBtn">테스트 기록 저장</button>
+      <button id="listBtn">내 기록 불러오기</button>
+    </div>
+    <div id="records"></div>
+  </section>
+</main>
+
+<script type="module">
+import { signUp, signIn, signOut, sendPasswordReset, setNewPassword, changePassword, onAuthChange } from './src/js/auth.js';
+import { buildResult, saveRecord, listRecords, deleteRecord } from './src/js/db.js';
+
+const $ = (id) => document.getElementById(id);
+const say = (text, isErr = false) => { $('log').textContent = text; $('log').className = isErr ? 'err' : ''; };
+// 버튼 하나를 안전하게 실행: 성공 메시지 또는 한글 오류를 화면 로그에 표시
+const run = (fn) => async () => { try { await fn(); } catch (e) { say(e.message, true); } };
+
+let currentUser = null;
+function paint(user, recovering = false) {
+  currentUser = user;
+  $('status').textContent = user ? `로그인됨: ${user.email}` : '로그아웃 상태';
+  $('authBox').hidden = !!user;
+  $('userBox').hidden = !user || recovering;
+  $('dbBox').hidden = !user || recovering;
+  $('recoverBox').hidden = !recovering;
+  if (!user) $('records').innerHTML = '';
+}
+
+// 로그인 상태가 바뀔 때마다 화면 갱신. PASSWORD_RECOVERY = 재설정 메일 링크로 들어온 상태
+onAuthChange((event, user) => paint(user, event === 'PASSWORD_RECOVERY'));
+
+$('signUpBtn').onclick = run(async () => {
+  const { needsConfirm } = await signUp($('email').value, $('pw').value);
+  say(needsConfirm ? '가입 요청 완료. 인증 메일의 링크를 눌러야 로그인됩니다. (인증을 꺼 두었다면 바로 로그인됨)' : '가입 완료! 로그인되었습니다.');
+});
+$('signInBtn').onclick = run(async () => { await signIn($('email').value, $('pw').value); say('로그인 성공'); });
+$('signOutBtn').onclick = run(async () => { await signOut(); say('로그아웃했어요.'); });
+$('resetBtn').onclick = run(async () => {
+  await sendPasswordReset($('email').value);
+  say('재설정 메일을 보냈어요. (가입된 이메일이면 도착합니다. 메일의 링크를 이 브라우저에서 열어 주세요)');
+});
+$('recoverBtn').onclick = run(async () => { await setNewPassword($('recoverPw').value); $('recoverPw').value = ''; say('새 비밀번호로 바꿨어요.'); paint(currentUser, false); });
+$('changeBtn').onclick = run(async () => {
+  await changePassword($('curPw').value, $('newPw').value);
+  $('curPw').value = ''; $('newPw').value = '';
+  say('비밀번호를 변경했어요.');
+});
+
+// ----- 기록 저장/조회/삭제 -----
+async function showRecords() {
+  const rows = await listRecords({ limit: 20 });
+  const box = $('records'); box.innerHTML = '';
+  if (!rows.length) { box.textContent = '저장된 기록이 없어요.'; return; }
+  for (const r of rows) {
+    const line = document.createElement('div'); line.className = 'rec';
+    const label = document.createElement('span');
+    label.textContent = `${new Date(r.created_at).toLocaleString('ko-KR')} · ${r.club}/${r.view}`;
+    const del = document.createElement('button'); del.textContent = '삭제';
+    del.onclick = run(async () => { await deleteRecord(r.id); await showRecords(); say('삭제했어요.'); });
+    line.append(label, del); box.appendChild(line);
+  }
+}
+$('saveBtn').onclick = run(async () => {
+  // 실제 프로그램에서는 buildResult(state.stages) 를 넣는다. 여기선 모양만 같은 가짜 값
+  const fake = [{ name: '임팩트', userT: 3.21, matchDist: 0.12, diffs: { elbow_L: 8.4, hip_R: 12.9 }, signed: { elbow_L: -8.4, hip_R: 12.9 }, head: { ex: 0.04, ey: -0.02, err: 0.045, bad: false } }];
+  const row = await saveRecord({ club: 'driver', view: 'front', result: buildResult(fake), memo: '테스트 기록' });
+  say(`저장 완료 (id: ${row.id.slice(0, 8)}…)`);
+  await showRecords();
+});
+$('listBtn').onclick = run(async () => { await showRecords(); say('내 기록을 불러왔어요.'); });
+</script>
+</body>
+</html>
