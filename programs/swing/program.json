@@ -1,0 +1,14 @@
+{
+  "id": "swing",
+  "order": 1,
+  "title": "스윙 분석",
+  "desc": "내 스윙을 프로와 비교 분석",
+  "icon": "<path d=\"M5 21L15 4\"/><circle cx=\"18\" cy=\"18\" r=\"2.5\"/>",
+  "color": "#3DBD75",
+  "entry": ".",
+  "include": [
+    "index.html",
+    "src",
+    "assets"
+  ]
+}

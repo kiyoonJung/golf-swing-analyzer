@@ -2,12 +2,13 @@
   "name": "swing-fixer-app",
   "version": "1.0.0",
   "private": true,
-  "description": "골프 스윙 포즈 분석 - Capacitor 모바일 앱 (iOS/Android)",
+  "description": "스윙픽서 - 골프 프로그램 모음 앱 (iOS/Android/웹). 스윙 분석 포함",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
+    "dev": "node scripts/build-www.mjs --native && node scripts/dev-server.mjs",
     "build": "node scripts/build-www.mjs",
     "build:native": "node scripts/build-www.mjs --native",
     "build:slim": "node scripts/build-www.mjs --slim",

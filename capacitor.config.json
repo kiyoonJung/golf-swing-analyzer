@@ -1,6 +1,6 @@
 {
   "appId": "com.example.swingfixer",
-  "appName": "Swing Fixer",
+  "appName": "스윙픽서",
   "webDir": "www",
   "ios": {
     "contentInset": "never",

@@ -1,0 +1,7 @@
+{
+  "id": "rulebook",
+  "order": 3,
+  "title": "룰북",
+  "icon": "<path d=\"M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z\"/><path d=\"M5 17a3 3 0 013-3h11\"/>",
+  "color": "#5AA2F7"
+}

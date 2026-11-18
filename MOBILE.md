@@ -1,3 +1,7 @@
+> **구조 변경 안내**: 이 저장소는 이제 여러 프로그램을 모으는 앱(스윙픽서)입니다. 아래에서 말하는 `index.html`, `src/`, `assets/`(스윙 분석 코드)는 **`programs/swing/`** 안에 있습니다. 앱 화면은 루트의 `index.html`, `src/`입니다.
+> 빌드·배포 명령(`npm run build`, `build:native`, `sync`, `ios`, `android`, `deploy`)은 그대로입니다. MediaPipe 복사본은 `programs/swing/vendor/mediapipe-pose/`에 만들어집니다.
+> 배포 주소의 첫 화면은 이제 프로그램 선택 화면이고, 스윙 분석은 `/programs/swing/` 에서 열립니다.
+
 # 모바일 앱 빌드 가이드 (Capacitor)
 
 기존 웹 프로그램을 iOS/Android 앱으로 감싸는 방법입니다. 웹 코드는 그대로 쓰고, `npm run build` 가 앱에 넣을 파일만 `www/` 로 모읍니다.

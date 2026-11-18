@@ -1,0 +1,7 @@
+{
+  "id": "minigame",
+  "order": 2,
+  "title": "미니게임",
+  "icon": "<path d=\"M7 21V3\"/><path d=\"M7 3l11 4.5L7 12\"/><path d=\"M3 21h8\"/>",
+  "color": "#F2B134"
+}
