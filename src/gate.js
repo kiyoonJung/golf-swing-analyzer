@@ -11,7 +11,7 @@
  *    로그아웃하면("swingfixer:signed-out" 또는 SIGNED_OUT) 홈으로 돌아가 로그인 창을 다시 띄운다.
  *  - 비밀번호 재설정 메일 링크는 이 화면(껍데기)으로 돌아온다 → 여기서 "새 비밀번호 설정"을 처리한다.
  *  - 로그인 상태가 바뀌면 document 에 'swingfixer:user' 이벤트(detail.user, detail.guest)를 보낸다.
- *  - 소셜 로그인(구글·카카오)은 자리만 있고 비활성이다. D 단계에서 연결한다.
+ *  - 소셜 로그인: 카카오는 연결됨(이메일 없이 닉네임·프사만). 구글은 보류 — 자리만 있고 비활성.
  * 서버 모듈은 스윙 쪽 파일을 그대로 쓴다(복사본을 만들지 않으려고): ../programs/swing/src/js/auth.js
  */
 (async () => {
@@ -37,6 +37,13 @@
   let dlg = null;
   const state = { user: null, view: 'login', dismissible: false, recovering: false };
   let mailUntil = 0, mailTimer = null;
+  // 카카오 등에서 돌아왔는데 실패한 경우 주소에 error_description 이 붙어 온다 → 로그인 창에 보여준다
+  let oauthError = '';
+  try {
+    const q = new URLSearchParams(location.search), h = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const d = q.get('error_description') || h.get('error_description');
+    if (d) { oauthError = '소셜 로그인에 실패했어요: ' + d.replace(/\+/g, ' '); history.replaceState(null, '', location.pathname); }
+  } catch { /* 무시 */ }
 
   const failOpen = setTimeout(() => { if (!settled) { settled = true; setGate('open'); } }, SESSION_WAIT);
   const openApp = () => { settled = true; clearTimeout(failOpen); if (dlg?.open) dlg.close(); setGate('open'); };
@@ -97,7 +104,7 @@
       </div>
       <div class="or">또는</div>
       <button type="button" class="g-btn" disabled title="준비 중">Google로 계속 (준비 중)</button>
-      <button type="button" class="g-btn" disabled title="준비 중">카카오로 계속 (준비 중)</button>
+      <button type="button" class="g-btn" data-kakao>카카오로 계속</button>
       <button type="button" class="g-btn" data-guest>${state.dismissible ? '게스트로 계속' : '게스트로 시작'}</button>
       <p class="hint">게스트는 분석만 할 수 있고 기록은 저장되지 않아요.</p>`,
     signup: () => `<form data-form="signup" novalidate>
@@ -150,6 +157,7 @@
     say(msg, kind);
     if (view === 'forgot') tickMail();
     $('[data-body] input')?.focus();
+    if (view === 'login' && !msg && oauthError) { say(oauthError, 'err'); oauthError = ''; }
   }
 
   /** hard=true: 닫을 수 없는 첫 화면 창(화면 가림). hard=false: 닫을 수 있는 창(스윙 안 "로그인" 버튼에서) */
@@ -217,9 +225,16 @@
     }
   }
 
-  function onClick(e) {
+  async function onClick(e) {
     const go = e.target.closest('[data-go]');
     if (go) return render(go.dataset.go);
+    if (e.target.closest('[data-kakao]')) {
+      const b = e.target.closest('[data-kakao]');
+      b.disabled = true; say('카카오로 이동하는 중…');
+      try { await A.signInWithKakao(); }   // 성공하면 카카오 화면으로 이동한다
+      catch (err) { say(err.message, 'err'); b.disabled = false; }
+      return;
+    }
     if (e.target.closest('[data-guest]')) {
       guestFlag.set(); openApp(); emit(null);
     }
