@@ -1,35 +1,18 @@
 /**
- * authui.js — 로그인 화면 + 첫 화면 로그인 창(게이트) (서버 담당 파일)
- * index.html 맨 아래의 이 한 줄이 화면 오른쪽 위 "로그인" 버튼과 로그인 창을 만든다:
+ * authui.js — 로그인 화면 (서버 담당 파일)
+ * index.html 맨 아래에 이 한 줄만 추가하면 화면 오른쪽 위에 "로그인" 버튼이 생긴다:
  *     <script type="module" src="src/js/authui.js"></script>
  *
- * [B 단계: 첫 화면 게이트]
- * - 접속하면 닫을 수 없는 로그인 창이 먼저 뜬다. 로그인하거나 "게스트로 시작"을 눌러야 분석 화면이 보인다.
- * - 이미 로그인된 상태(저장된 세션)면 창 없이 바로 통과한다.
- * - 세션을 확인하는 동안(<html data-gate="pending">) 분석 화면은 index.html <head> 의 스타일이 가려 둔다.
- *   data-gate 값: pending(확인 중) → locked(로그인 창, 화면 가림) | open(화면 보임)
- * - 서버(CDN)에 연결하지 못하거나 5초 안에 세션 확인이 안 끝나면 자동으로 게스트로 연다 (앱이 잠기지 않게).
- *   authui.js 자체를 못 불러오는 경우는 index.html <head> 의 8초 안전장치가 화면을 연다.
- * - 게스트 A: 서버 계정을 만들지 않는다. 분석만 가능, 저장 불가. 게스트 선택은 "탭을 닫을 때까지"(sessionStorage) 기억한다.
- *   저장 버튼 등에서 가입을 안내하려면: document.dispatchEvent(new CustomEvent('swingfixer:need-login'))
- * - 로그인 상태가 바뀌면 document 에 'swingfixer:user' 이벤트(detail.user = 사용자 또는 null, detail.guest = 게스트로 쓰는 중인지)를 보낸다.
- *   (<html data-signed-in="true|false"> 도 갱신)
- * - 비밀번호 재설정 메일 링크로 돌아오면(PASSWORD_RECOVERY) 이 창에서 "새 비밀번호 설정"을 처리한다.
- * - 소셜 로그인(구글·카카오) 버튼은 자리만 있고 비활성이다. D 단계에서 연결한다.
+ * - 버튼을 누르면 로그인 / 회원가입 / 비밀번호 찾기 창이 뜨고, 로그인하면 계정 창(비밀번호 변경·로그아웃)으로 바뀐다.
+ * - 재설정 메일 링크로 들어오면 자동으로 "새 비밀번호 설정" 창이 열린다.
+ * - 로그인은 선택 사항이다. 로그인하지 않아도 기존 분석 기능은 그대로 동작한다.
+ * - 로그인 상태가 바뀌면 document 에 'swingfixer:user' 이벤트(detail.user = 사용자 또는 null)를 보낸다.
+ *   → 저장 버튼 같은 다른 코드는 이 이벤트를 들으면 된다. (<html data-signed-in="true|false"> 도 갱신)
+ * - 서버(CDN)에 연결하지 못해도 이 파일만 실패하고 프로그램 본체(app.js)에는 영향이 없다.
  */
 (async () => {
-  const MIN_PW = 6;           // Supabase 기본 최소 비밀번호 길이
-  const MAIL_COOLDOWN = 60;   // 재설정 메일은 연속으로 누르지 못하게 60초 대기 (메일 한도 보호)
-  const SESSION_WAIT = 5000;  // 세션 확인을 이만큼(ms) 기다려도 안 끝나면 게스트로 연다
-  const GUEST_KEY = 'swingfixer:guest';
-  const root = document.documentElement;
-
-  // ---------- 게스트 선택 기억 (저장소를 못 쓰는 환경이어도 오류 없이 동작) ----------
-  const guestFlag = {
-    get() { try { return sessionStorage.getItem(GUEST_KEY) === '1'; } catch { return false; } },
-    set() { try { sessionStorage.setItem(GUEST_KEY, '1'); } catch { /* 무시 */ } },
-    clear() { try { sessionStorage.removeItem(GUEST_KEY); } catch { /* 무시 */ } },
-  };
+  const MIN_PW = 6;          // Supabase 기본 최소 비밀번호 길이
+  const MAIL_COOLDOWN = 60;  // 재설정 메일은 연속으로 누르지 못하게 60초 대기 (메일 한도 보호)
 
   // ---------- 스타일 (style.css 의 색 변수를 그대로 사용, 없으면 기본색) ----------
   const style = document.createElement('style');
@@ -40,8 +23,6 @@
       padding:16px; width:min(420px, calc(100% - 24px)); max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow:auto;
       box-shadow:0 10px 40px rgba(0,0,0,.35); font-family:inherit; }
     dialog.authdlg::backdrop { background:rgba(0,0,0,.5); }
-    dialog.authdlg.gate::backdrop { background:var(--bg,#EEF1E8); }
-    .authdlg.gate [data-close] { display:none; }
     .authdlg .hd { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
     .authdlg h3 { margin:0; font-size:17px; }
     .authdlg label { display:block; font-size:13px; color:var(--sub,#5B6B5F); margin-bottom:8px; }
@@ -56,12 +37,6 @@
     .authdlg .acct { font-size:14px; margin-bottom:6px; overflow-wrap:anywhere; }
     .authdlg .sub { font-size:13px; color:var(--sub,#5B6B5F); margin:0 0 10px; }
     .authdlg hr { border:0; border-top:1px solid var(--line,#CBD3C4); margin:12px 0; }
-    .authdlg .social { display:flex; gap:8px; margin-top:12px; }
-    .authdlg .social .btn { flex:1 1 0; }
-    .authdlg .soon { font-size:12px; color:var(--sub,#5B6B5F); margin:6px 0 0; text-align:center; }
-    .authdlg .guest { margin-top:12px; }
-    .authdlg .guest .btn { width:100%; }
-    .authdlg .guest small { display:block; margin-top:6px; font-size:12px; color:var(--sub,#5B6B5F); text-align:center; }
   `;
   document.head.appendChild(style);
 
@@ -75,7 +50,7 @@
   bar.appendChild(btn);
   (document.querySelector('.topbar') ?? document.body).prepend(bar);
 
-  // ---------- 서버 모듈 불러오기 (실패하면 게스트로 열어 프로그램 본체는 정상 동작) ----------
+  // ---------- 서버 모듈 불러오기 (실패해도 프로그램 본체는 정상) ----------
   let A;
   try {
     A = await import('./auth.js');
@@ -83,19 +58,13 @@
     btn.textContent = '로그인 불가';
     btn.disabled = true;
     btn.title = '서버에 연결하지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.';
-    root.dataset.gate = 'open';
-    root.dataset.signedIn = 'false';
-    document.dispatchEvent(new CustomEvent('swingfixer:user', { detail: { user: null, guest: true } }));
     return;
   }
 
   // ---------- 상태 ----------
-  const state = { user: null, view: 'login', gate: root.dataset.gate || 'pending' };
+  const state = { user: null, view: 'login' };
   let mailUntil = 0;     // 재설정 메일을 다시 보낼 수 있는 시각(ms)
   let mailTimer = null;
-  let waitTimer = null;  // 세션 확인 제한 시간
-
-  const locked = () => state.gate === 'locked';
 
   // ---------- 창(dialog) 뼈대 ----------
   const dlg = document.createElement('dialog');
@@ -115,18 +84,6 @@
   const field = (label, name, type, auto) =>
     `<label>${label}<input name="${name}" type="${type}" autocomplete="${auto}" required${type === 'email' ? ' inputmode="email"' : ''}></label>`;
 
-  // 소셜 로그인 자리 (D 단계에서 연결). 지금은 비활성
-  const SOCIAL = `<div class="social">
-      <button type="button" class="btn" disabled>Google</button>
-      <button type="button" class="btn" disabled>카카오</button>
-    </div>
-    <p class="soon">소셜 로그인은 준비 중이에요.</p>`;
-  // 게스트 시작 (게이트 상태에서만 표시)
-  const GUEST = `<div class="guest">
-      <button type="button" class="btn" data-start-guest>게스트로 시작</button>
-      <small>분석만 할 수 있고, 기록은 저장되지 않아요.</small>
-    </div>`;
-
   const VIEWS = {
     login: {
       title: '로그인',
@@ -138,8 +95,7 @@
         <div class="links">
           <button type="button" class="link" data-go="signup">회원가입</button>
           <button type="button" class="link" data-go="forgot">비밀번호를 잊으셨나요?</button>
-        </div>
-        ${SOCIAL}`,
+        </div>`,
     },
     signup: {
       title: '회원가입',
@@ -187,10 +143,7 @@
   function render(view, msg = '', kind = '') {
     state.view = view;
     $title.textContent = VIEWS[view].title;
-    // 게이트(첫 화면 잠금) 상태에서는 로그인/가입/비밀번호 찾기 창 아래에 게스트 시작 버튼을 붙인다
-    const withGuest = locked() && ['login', 'signup', 'forgot'].includes(view);
-    $body.innerHTML = (locked() && view === 'login' ? '<p class="sub">로그인하거나 게스트로 시작하세요.</p>' : '')
-      + VIEWS[view].html + (withGuest ? GUEST : '');
+    $body.innerHTML = VIEWS[view].html;
     say(msg, kind);
     if (view === 'account') $body.querySelector('[data-acct]').textContent = state.user?.email ?? '';
     if (view === 'forgot') tickMailButton();
@@ -199,30 +152,7 @@
   }
 
   function open(view, msg, kind) { render(view, msg, kind); if (!dlg.open) dlg.showModal(); }
-  // 잠긴 동안(첫 화면 게이트)에는 닫히지 않는다
-  const close = () => { if (dlg.open && !locked()) dlg.close(); };
-
-  // ---------- 게이트 ----------
-  /** pending | locked | open — <html data-gate> 와 창 모양(✕ 숨김, 배경 가림)을 함께 바꾼다 */
-  function setGate(g) {
-    state.gate = g;
-    root.dataset.gate = g;
-    dlg.classList.toggle('gate', g === 'locked');
-    if (g !== 'pending') { clearTimeout(waitTimer); waitTimer = null; }
-  }
-  /** 분석 화면을 보여 주되 로그인하지 않은 상태 */
-  function startGuest() {
-    guestFlag.set();
-    setGate('open');
-    if (dlg.open) dlg.close();
-    announce();
-  }
-  /** 로그인 창을 잠근 채로 띄움 (로그인 또는 게스트 선택 전까지 분석 화면을 가림) */
-  function lockWithLogin() { setGate('locked'); open('login'); }
-
-  // ESC 로 닫으려 하면 막고, 그래도 닫혔다면(브라우저에 따라 ESC 를 연속으로 누르면 취소가 안 됨) 바로 다시 띄운다
-  dlg.addEventListener('cancel', (e) => { if (locked()) e.preventDefault(); });
-  dlg.addEventListener('close', () => { if (locked()) setTimeout(() => { if (locked() && !dlg.open) dlg.showModal(); }, 0); });
+  const close = () => { if (dlg.open) dlg.close(); };
 
   // 재설정 메일 버튼: 보낸 뒤 60초 동안은 "다시 보내기 (n초)" 로 잠금
   function tickMailButton() {
@@ -290,14 +220,12 @@
   $body.addEventListener('click', async (e) => {
     const go = e.target.closest('[data-go]');
     if (go) return render(go.dataset.go);
-    if (e.target.closest("[data-start-guest]")) return startGuest();
     if (e.target.closest('[data-signout]')) {
-      // 로그아웃하면 아래 onAuthChange(SIGNED_OUT) 가 첫 화면 로그인 창으로 되돌린다
-      try { await A.signOut(); } catch (err) { say(err.message, 'err'); }
+      try { await A.signOut(); close(); } catch (err) { say(err.message, 'err'); }
     }
   });
   dlg.querySelector('[data-close]').onclick = close;
-  dlg.addEventListener('click', (e) => { if (e.target === dlg) close(); });   // 창 바깥(어두운 곳)을 누르면 닫힘 (잠긴 동안은 무시)
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) close(); });   // 창 바깥(어두운 곳)을 누르면 닫힘
 
   // ---------- 상단 버튼 ----------
   function paintButton() {
@@ -306,56 +234,20 @@
       const name = (u.email || '').split('@')[0];
       btn.textContent = '👤 ' + (name.length > 12 ? name.slice(0, 12) + '…' : name);
       btn.title = u.email || '';
-    } else if (state.gate === 'open') {
-      btn.textContent = '게스트 · 로그인';
-      btn.title = '게스트로 이용 중이에요. 기록을 저장하려면 로그인하세요.';
     } else { btn.textContent = '로그인'; btn.title = ''; }
   }
   btn.onclick = () => open(state.user ? 'account' : 'login');
 
-  /** 현재 상태를 화면 표시와 다른 코드에 알림 */
-  function announce() {
-    const guest = !state.user && state.gate === 'open';
-    paintButton();
-    root.dataset.signedIn = state.user ? 'true' : 'false';
-    root.dataset.guest = guest ? 'true' : 'false';
-    document.dispatchEvent(new CustomEvent('swingfixer:user', { detail: { user: state.user, guest } }));
-  }
-
-  // 저장 버튼 등 다른 코드가 "로그인이 필요해요" 안내를 띄울 때 쓰는 이벤트 (detail.message 로 문구 지정 가능)
-  document.addEventListener('swingfixer:need-login', (e) => {
-    if (state.user || locked()) return;
-    open('login', e.detail?.message ?? '기록을 저장하려면 로그인해 주세요.');
-  });
-
   // ---------- 로그인 상태 변화 ----------
-  // 첫 이벤트 INITIAL_SESSION 이 "저장된 세션 확인 끝"을 뜻한다. 그동안은 data-gate="pending" 으로 분석 화면을 가려 둔다.
-  waitTimer = setTimeout(() => {
-    if (state.gate !== 'pending') return;
-    console.warn('[authui] 세션 확인이 늦어 게스트로 엽니다.');
-    setGate('open');
-    announce();
-  }, SESSION_WAIT);
-
   A.onAuthChange((event, user) => {
     state.user = user;
-
-    if (user) {                                   // 로그인됨 (저장된 세션 포함) → 게스트 선택은 지움
-      guestFlag.clear();
-      setGate('open');
-    } else if (event === 'SIGNED_OUT') {           // 로그아웃 → 첫 화면 로그인 창으로 되돌림
-      guestFlag.clear();
-      announce();
-      return lockWithLogin();
-    } else if (event === 'INITIAL_SESSION' || state.gate === 'pending') {
-      // 저장된 세션 없음: 이 탭에서 게스트를 골랐다면 통과, 아니면 로그인 창
-      if (guestFlag.get()) setGate('open');
-      else { announce(); return lockWithLogin(); }
-    }
-    announce();
+    paintButton();
+    document.documentElement.dataset.signedIn = user ? 'true' : 'false';
+    document.dispatchEvent(new CustomEvent('swingfixer:user', { detail: { user } }));
 
     if (event === 'PASSWORD_RECOVERY') return open('recover');            // 재설정 메일 링크로 들어옴
     if (!dlg.open) return;
     if (user && event === 'SIGNED_IN' && ['login', 'signup', 'forgot'].includes(state.view)) close();
+    if (!user && state.view === 'account') close();
   });
 })();

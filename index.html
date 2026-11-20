@@ -1,136 +1,15 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <!-- viewport-fit=cover: 노치/홈 인디케이터 영역까지 화면을 쓰고, 안전 영역은 CSS env(safe-area-inset-*) 로 피함 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#EEF1E8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#121A14" media="(prefers-color-scheme: dark)">
-  <title>골프 스윙 포즈 분석</title>
-  <link rel="stylesheet" href="src/css/style.css">
-  <!-- [서버/로그인 게이트] 로그인 확인이 끝나기 전에는 분석 화면을 가려 깜빡임을 막는다. (src/js/authui.js 가 data-gate 를 pending → locked/open 으로 바꿈)
-       authui.js 가 8초 안에 화면을 열지 못하면(파일 로딩 실패 등) 안전장치로 화면을 연다. 로그인 창(dialog)은 가려지지 않는다. -->
-  <style>html[data-gate]:not([data-gate="open"]) body > :not(dialog) { visibility: hidden; }</style>
-  <script>
-    document.documentElement.dataset.gate = 'pending';
-    setTimeout(function () {
-      if (document.documentElement.dataset.gate === 'pending') document.documentElement.dataset.gate = 'open';
-    }, 8000);
-  </script>
-  <!-- MediaPipe Pose 는 src/js/mediapipe.js 가 처음 분석할 때 불러옴 (앱: vendor/mediapipe-pose 로컬 파일 우선, 없으면 CDN) -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EEF1E8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121A14" media="(prefers-color-scheme: dark)">
+<title>스윙픽서</title>
+<link rel="stylesheet" href="src/css/style.css">
 </head>
 <body>
-  <header class="topbar">
-    <h1>골프 스윙 포즈 분석</h1>
-
-    <!-- 상단: 스윙 시점 / 입력 방식 선택 -->
-    <div class="controls">
-      <div class="seg" id="clubSeg" role="group" aria-label="클럽 종류"></div>
-      <div class="seg" id="viewSeg" role="group" aria-label="스윙 시점">
-        <!-- 글자는 app.js 가 선택된 클럽 이름으로 바꿔 씀 (예: 아이언 정면) -->
-        <button data-view="front" class="on">정면</button>
-        <button data-view="side">측면</button>
-      </div>
-      <div class="seg" id="inputSeg" role="group" aria-label="입력 방식">
-        <button data-input="file" class="on">파일 업로드</button>
-        <button data-input="live">라이브 카메라</button>
-      </div>
-    </div>
-
-    <!-- 파일 업로드 모드 도구 -->
-    <div class="controls" id="filePanel">
-      <label class="btn">내 영상 선택<span class="ext"> (.mp4)</span>
-        <input id="userFile" type="file" accept="video/*" hidden>
-      </label>
-    </div>
-
-    <!-- 라이브 카메라 모드 도구 -->
-    <div class="controls" id="livePanel" hidden>
-      <button class="btn" id="camBtn">카메라 켜기</button>
-      <button class="btn" id="flipBtn" disabled aria-label="전면/후면 카메라 전환">🔄 전환</button>
-      <button class="btn rec" id="startRecBtn" disabled>녹화 시작</button>
-      <button class="btn" id="stopRecBtn" disabled>녹화 종료</button>
-    </div>
-  </header>
-
-  <!-- 중단: 듀얼 비디오 플레이어 -->
-  <main class="players">
-    <section class="pane">
-      <h2>프로 레퍼런스</h2>
-      <div class="stage" id="proStage">
-        <video id="proVideo" muted playsinline preload="auto"></video>
-        <canvas id="proOverlay"></canvas>
-      </div>
-      <!-- 영상별 재생 컨트롤 (player.js 가 배속 버튼을 채움) -->
-      <div class="vctl" id="proCtl" aria-label="프로 영상 재생">
-        <button class="btn sm play" data-act="play" disabled>▶</button>
-        <div class="seg sm speeds" role="group" aria-label="프로 영상 배속"></div>
-        <input class="seek" type="range" min="0" max="1000" value="0" disabled aria-label="프로 영상 위치">
-        <span class="time">0.00s</span>
-        <button class="btn sm skel on" data-act="skel" aria-pressed="true" title="스켈레톤 켜기/끄기">스켈레톤</button>
-      </div>
-    </section>
-    <section class="pane">
-      <h2>내 스윙 (포즈 오버레이)</h2>
-      <div class="stage" id="userStage">
-        <video id="userVideo" muted playsinline></video>
-        <img id="guideImg" alt="자세 가이드" hidden>
-        <canvas id="overlay"></canvas>
-      </div>
-      <!-- 영상별 재생 컨트롤 (player.js 가 배속 버튼을 채움) -->
-      <div class="vctl" id="userCtl" aria-label="내 영상 재생">
-        <button class="btn sm play" data-act="play" disabled>▶</button>
-        <div class="seg sm speeds" role="group" aria-label="내 영상 배속"></div>
-        <input class="seek" type="range" min="0" max="1000" value="0" disabled aria-label="내 영상 위치">
-        <span class="time">0.00s</span>
-        <button class="btn sm skel on" data-act="skel" aria-pressed="true" title="스켈레톤 켜기/끄기">스켈레톤</button>
-      </div>
-    </section>
-  </main>
-
-  <p class="status" id="status" role="status">입력 방식을 선택하고 영상을 준비하세요.</p>
-
-  <div class="controls actions">
-    <button class="btn main" id="analyzeBtn" disabled>분석하기</button>
-    <!-- 재생 모드: 개별 = 영상마다 따로 / 동기화 = 어드레스에서 함께 출발·정속(템포 비교) / 동작 맞춤 = 단계 타이밍에 맞춰 프로 변속 (player.js) -->
-    <div class="seg" id="modeSeg" role="group" aria-label="재생 모드">
-      <button data-mode="solo" class="on">개별 재생</button>
-      <button data-mode="sync" title="어드레스에서 함께 출발, 둘 다 일정한 속도 (템포 비교)">동기화 재생</button>
-      <button data-mode="match" title="단계를 비슷한 타이밍에 넘어가도록 프로가 변속 (자세 흐름 비교)">동작 맞춤 재생</button>
-    </div>
-  </div>
-  <div class="chips" id="chips" aria-label="스윙 단계"></div>
-
-  <!-- 미세 조정: AI가 찾은 장면이 어긋났을 때 프레임 단위로 바로잡기 -->
-  <section class="adjust" id="adjust" hidden>
-    <div class="adjust-title">미세 조정 <span id="adjInfo"></span></div>
-    <div class="adjust-row">
-      <button class="btn" id="adjPrev" aria-label="1프레임 앞으로">◀ 1프레임</button>
-      <input id="adjSlider" type="range" min="0" max="0" step="1" value="0" aria-label="프레임 위치">
-      <button class="btn" id="adjNext" aria-label="1프레임 뒤로">1프레임 ▶</button>
-      <button class="btn" id="adjReset">AI 위치로</button>
-    </div>
-    <p class="adjust-hint">AI가 찾은 장면이 어긋났다면 슬라이더나 ◀ ▶ 로 정확한 순간에 맞추세요. 오차와 피드백이 바로 다시 계산됩니다.</p>
-  </section>
-
-  <!-- 하단: 실시간 피드백 카드 -->
-  <aside id="feedbackCard" class="card" aria-live="polite">
-    <b>피드백</b>
-    <span id="feedbackText">영상을 분석하면 스윙 단계별 조언이 여기에 표시됩니다.</span>
-  </aside>
-
-  <script>
-    // 프로그램이 끝까지 시작하지 못하면(파일 버전이 서로 맞지 않을 때 등) 이유를 화면에 알려줌
-    setTimeout(function () {
-      if (!window.__appStarted) {
-        document.getElementById('status').textContent =
-          '⚠ 프로그램을 불러오지 못했습니다. 파일 버전이 서로 맞지 않을 가능성이 큽니다. ' +
-          'index.html 과 src 폴더를 같은 버전으로 통째로 교체한 뒤 Ctrl+Shift+R 로 새로고침하세요. ' +
-          '(자세한 원인: F12 → Console 의 빨간 글씨)';
-      }
-    }, 3000);
-  </script>
-  <script type="module" src="src/app.js"></script>
-  <script type="module" src="src/js/authui.js"></script>
+<div id="app"></div>
+<script type="module" src="src/main.js"></script>
 </body>
 </html>
