@@ -7,9 +7,17 @@
 <meta name="theme-color" content="#121A14" media="(prefers-color-scheme: dark)">
 <title>스윙픽서</title>
 <link rel="stylesheet" href="src/css/style.css">
+<!-- [B 게이트] 로그인 확인이 끝나기 전에는 홈 화면을 가린다. gate.js 가 data-gate 를 locked/open 으로 바꾼다.
+     gate.js 를 아예 못 불러와도 8초 뒤에는 화면을 연다(앱이 잠기지 않게). -->
+<style>html[data-gate="pending"] #app, html[data-gate="locked"] #app { visibility: hidden; }</style>
+<script>
+  document.documentElement.dataset.gate = 'pending';
+  setTimeout(function () { if (document.documentElement.dataset.gate === 'pending') document.documentElement.dataset.gate = 'open'; }, 8000);
+</script>
 </head>
 <body>
 <div id="app"></div>
 <script type="module" src="src/main.js"></script>
+<script type="module" src="src/gate.js"></script>
 </body>
 </html>
