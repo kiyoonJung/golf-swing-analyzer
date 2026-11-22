@@ -57,7 +57,16 @@ npm run dev          # http://localhost:3000  (Windows 는 start-app.bat 더블�
 | `programs/swing/src/js/authui.js` | 스윙 화면 상단의 로그인 상태 표시 (앱 안에서는 로그인 창을 부모 화면에 요청) |
 | `programs/swing/src/js/records.js` | 기록 저장·목록·상세·삭제, 영상 업로드와 용량 제한 |
 | `programs/swing/src/js/recordsui.js` | 상단 💾 저장 / 📂 내 기록 버튼과 창 |
+| `programs/swing/src/js/theme.js` | 화면 모드(다크 / 라이트 / 시스템 설정) 선택 탭과 저장 |
 | `programs/swing/src/js/db.js`, `auth-test.html` | 초기 DB 시험용 (`auth-test.html` 은 앱 빌드에 포함되지 않음, 포트 8010 에서만 동작) |
+
+### 화면 모드 (다크 / 라이트 / 시스템 설정)
+- 탭 3개로 선택하며, 위치는 **로그인 창 카드 아래, 홈 화면 맨 아래, 스윙 분석 화면 맨 아래**입니다. (`theme.js` 의 `mountThemeSwitch(칸)` 으로 붙임)
+- 선택값은 브라우저 `localStorage` 의 `swingfixer:theme` (`dark` / `light` / `system`)에 저장됩니다. 서버(Supabase)에는 저장하지 않습니다.
+- `dark` / `light` 는 `<html data-theme>` 로 색을 고정하고, `system` 은 `data-theme` 를 지워 기기 설정(`prefers-color-scheme`)을 따릅니다.
+- 앱과 스윙 분석(iframe)은 같은 출처라 `storage` 이벤트로 서로 바로 맞춰집니다. 두 `index.html` 의 `<head>` 한 줄은 첫 화면 깜빡임 방지용입니다.
+- 색은 `src/css/style.css`(앱)와 `programs/swing/src/css/style.css`(스윙)에서 정합니다. 새 화면을 만들 때도 `data-theme` 를 지원하는 색 변수를 쓰세요.
+- 한계: 브라우저 상단 바 색(`theme-color`)은 아직 기기 설정을 따릅니다.
 
 ### 동작 규칙
 - **게스트**: 분석은 가능하고 저장은 불가. 저장·내 기록을 누르면 로그인 안내가 나옴. 게스트 상태는 `sessionStorage` 에만 있음.
@@ -96,6 +105,7 @@ npm run dev          # http://localhost:3000  (Windows 는 start-app.bat 더블�
 8. 게스트로 저장 클릭 시 로그인 안내. 다른 계정으로는 남의 기록이 보이지 않는다.
 9. 카메라 녹화(webm) 저장·재생 (아이폰 Safari 재생은 확실하지 않음).
 10. Galaxy 세로·가로 모드에서 창이 화면 안에 들어온다.
+11. 로그인 창·홈·스윙 분석 아래의 화면 모드 탭이 보이고, 한쪽에서 바꾸면 나머지도 바뀐다. 새로고침해도 유지되고, 시스템 설정은 기기 모드를 따른다.
 
 ## 깃에 반영하는 법
 이 폴더의 내용으로 저장소를 통째로 교체합니다. (폴더 구조가 바뀌어서 옛 파일을 지워야 합니다)
