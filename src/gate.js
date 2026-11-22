@@ -11,7 +11,8 @@
  *    로그아웃하면("swingfixer:signed-out" 또는 SIGNED_OUT) 홈으로 돌아가 로그인 창을 다시 띄운다.
  *  - 비밀번호 재설정 메일 링크는 이 화면(껍데기)으로 돌아온다 → 여기서 "새 비밀번호 설정"을 처리한다.
  *  - 로그인 상태가 바뀌면 document 에 'swingfixer:user' 이벤트(detail.user, detail.guest)를 보낸다.
- *  - 소셜 로그인: 카카오는 연결됨(이메일 없이 닉네임·프사만). 구글은 보류 — 자리만 있고 비활성.
+ *  - 소셜 로그인: 카카오·구글 모두 보류 — 버튼은 비활성. 카카오는 아래 SOCIAL.kakao 를 true 로 바꾸면 켜진다.
+ *  - 화면 모드(다크/라이트/시스템 설정) 선택 탭은 로그인 창 카드 바로 아래에 붙는다 (theme.js)
  * 서버 모듈은 스윙 쪽 파일을 그대로 쓴다(복사본을 만들지 않으려고): ../programs/swing/src/js/auth.js
  */
 (async () => {
@@ -19,6 +20,7 @@
   const GUEST_KEY = 'swingfixer:guest';
   const MIN_PW = 6;           // Supabase 기본 최소 비밀번호 길이
   const MAIL_COOLDOWN = 60;   // 재설정 메일 연속 요청 방지(초)
+  const SOCIAL = { kakao: false };   // 카카오 로그인 버튼 켜기/끄기 (비즈 앱 전환 전까지 false)
   const SESSION_WAIT = 5000;  // 이 시간(ms) 안에 세션 확인이 안 끝나면 게스트로 연다
 
   const guestFlag = {
@@ -52,7 +54,8 @@
   state.recovering = /type=recovery/.test(location.hash + location.search);
 
   // ---------- 서버 모듈 ----------
-  let A;
+  let A, mountThemeSwitch = () => {};
+  try { ({ mountThemeSwitch } = await import('../programs/swing/src/js/theme.js')); } catch (e) { console.warn('[gate] 화면 모드 모듈 없음:', e); }
   try { A = await import('../programs/swing/src/js/auth.js'); }
   catch (e) {
     console.warn('[gate] 서버 모듈을 불러오지 못해 게스트로 엽니다:', e);
@@ -64,9 +67,10 @@
   const style = document.createElement('style');
   style.textContent = `
     html[data-gate="pending"] #app, html[data-gate="locked"] #app { visibility:hidden; }
-    dialog.gatedlg { border:1px solid var(--line,#CBD3C4); border-radius:16px; background:var(--card,#fff); color:var(--ink,#17231B);
-      padding:20px; width:min(420px, calc(100% - 24px)); max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow:auto;
-      box-shadow:0 10px 40px rgba(0,0,0,.35); font:inherit; }
+    dialog.gatedlg { border:0; background:transparent; color:var(--ink,#17231B); padding:0;
+      width:min(420px, calc(100% - 24px)); max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); overflow:auto; font:inherit; }
+    .gatedlg .gcard { border:1px solid var(--line,#CBD3C4); border-radius:16px; background:var(--card,#fff); padding:20px; box-shadow:0 10px 40px rgba(0,0,0,.35); }
+    .gatedlg .gtheme { margin-top:14px; padding-bottom:4px; }
     dialog.gatedlg::backdrop { background:var(--bg,#EEF1E8); }
     .gatedlg.soft::backdrop { background:rgba(0,0,0,.5); }
     .gatedlg h2 { margin:0 0 4px; font-size:20px; letter-spacing:-.02em; }
@@ -104,7 +108,7 @@
       </div>
       <div class="or">또는</div>
       <button type="button" class="g-btn" disabled title="준비 중">Google로 계속 (준비 중)</button>
-      <button type="button" class="g-btn" data-kakao>카카오로 계속</button>
+      ${SOCIAL.kakao ? '<button type="button" class="g-btn" data-kakao>카카오로 계속</button>' : '<button type="button" class="g-btn" disabled title="준비 중">카카오로 계속 (준비 중)</button>'}
       <button type="button" class="g-btn" data-guest>${state.dismissible ? '게스트로 계속' : '게스트로 시작'}</button>
       <p class="hint">게스트는 분석만 할 수 있고 기록은 저장되지 않아요.</p>`,
     signup: () => `<form data-form="signup" novalidate>
@@ -134,9 +138,11 @@
     dlg = document.createElement('dialog');
     dlg.className = 'gatedlg';
     dlg.setAttribute('aria-labelledby', 'gateTitle');
-    dlg.innerHTML = `<button type="button" class="x" data-close aria-label="닫기" hidden>✕</button>
+    dlg.innerHTML = `<div class="gcard"><button type="button" class="x" data-close aria-label="닫기" hidden>✕</button>
       <h2 id="gateTitle"></h2><p class="brandsub">스윙픽서</p><div data-body></div>
-      <div class="msg" role="status" aria-live="polite" data-msg></div>`;
+      <div class="msg" role="status" aria-live="polite" data-msg></div></div>
+      <div class="gtheme" data-theme-host></div>`;
+    mountThemeSwitch(dlg.querySelector('[data-theme-host]'));
     document.body.appendChild(dlg);
     dlg.addEventListener('cancel', (e) => { if (!state.dismissible) e.preventDefault(); });   // 첫 화면 창은 Esc 로 못 닫음
     dlg.addEventListener('click', (e) => { if (e.target === dlg && state.dismissible) dlg.close(); });
@@ -228,7 +234,7 @@
   async function onClick(e) {
     const go = e.target.closest('[data-go]');
     if (go) return render(go.dataset.go);
-    if (e.target.closest('[data-kakao]')) {
+    if (SOCIAL.kakao && e.target.closest('[data-kakao]')) {
       const b = e.target.closest('[data-kakao]');
       b.disabled = true; say('카카오로 이동하는 중…');
       try { await A.signInWithKakao(); }   // 성공하면 카카오 화면으로 이동한다

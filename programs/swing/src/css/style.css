@@ -4,9 +4,12 @@
   --card: #FFFFFF; --line: #CBD3C4;
   --turf: #2F6B3A; --ok: #1FA64A; --bad: #E5383B;
 }
+/* 화면 모드: 시스템 설정(기본) 또는 data-theme 로 강제 (theme.js) */
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #121A14; --ink: #E8EEE4; --sub: #9DB0A2; --card: #1B261E; --line: #2D3B31; --turf: #4E9A5C; }
+  :root:not([data-theme="light"]) { --bg: #121A14; --ink: #E8EEE4; --sub: #9DB0A2; --card: #1B261E; --line: #2D3B31; --turf: #4E9A5C; }
 }
+:root[data-theme="dark"] { color-scheme: dark; --bg: #121A14; --ink: #E8EEE4; --sub: #9DB0A2; --card: #1B261E; --line: #2D3B31; --turf: #4E9A5C; }
+:root[data-theme="light"] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }

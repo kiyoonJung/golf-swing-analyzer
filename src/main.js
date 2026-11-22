@@ -14,13 +14,16 @@ async function main() {
 
   app.innerHTML = `
   <section class="home"><header class="top"><h1 class="brand">${FLAG}${NAME}</h1><p class="lead">프로그램을 선택하세요</p></header>
-    <div class="grid">${programs.map((p, i) => `<a class="tile${p.url ? '' : ' soon'}" href="#${esc(p.id)}" style="--i:${i}${p.color ? `;--c:${esc(p.color)}` : ''}"><span class="ico">${svg(p.icon)}</span>${p.url ? `<span class="go">${svg('<path d="M7 17L17 7M9 7h8v8"/>')}</span>` : `<span class="pill">${esc(p.badge ?? '준비 중')}</span>`}<span class="wm">${svg(p.icon)}</span><span class="tx"><b>${esc(p.title)}</b>${p.desc ? `<span class="d">${esc(p.desc)}</span>` : ''}</span></a>`).join('')}</div></section>
+    <div class="grid">${programs.map((p, i) => `<a class="tile${p.url ? '' : ' soon'}" href="#${esc(p.id)}" style="--i:${i}${p.color ? `;--c:${esc(p.color)}` : ''}"><span class="ico">${svg(p.icon)}</span>${p.url ? `<span class="go">${svg('<path d="M7 17L17 7M9 7h8v8"/>')}</span>` : `<span class="pill">${esc(p.badge ?? '준비 중')}</span>`}<span class="wm">${svg(p.icon)}</span><span class="tx"><b>${esc(p.title)}</b>${p.desc ? `<span class="d">${esc(p.desc)}</span>` : ''}</span></a>`).join('')}</div>
+    <div class="themehost" style="padding:0 18px calc(28px + env(safe-area-inset-bottom,0))"></div></section>
   <section class="shell" hidden>
     <header class="top bar"><a class="back" href="#" aria-label="홈으로">${svg('<path d="M15 6l-6 6 6 6"/>')}</a><h1 class="brand">${NAME}</h1></header>
     <nav class="tabs" role="tablist" aria-label="프로그램">${programs.map((p) => `<button class="tab" role="tab" data-id="${esc(p.id)}">${esc(p.title)}</button>`).join('')}</nav>
     <main class="stage"></main></section>`;
 
   const home = app.querySelector('.home'), shell = app.querySelector('.shell');
+  // 화면 모드(다크/라이트/시스템 설정) 선택 — 홈 맨 아래. 못 불러와도 홈은 정상 동작
+  import('../programs/swing/src/js/theme.js').then((m) => m.mountThemeSwitch(app.querySelector('.themehost'))).catch(() => {});
   const tabs = shell.querySelector('.tabs'), stage = shell.querySelector('.stage');
   let panels = {};   // 연 프로그램은 탭을 오가도 유지. 홈으로 나가면 모두 닫는다(카메라도 함께 꺼짐).
 

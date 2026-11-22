@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#121A14" media="(prefers-color-scheme: dark)">
   <title>골프 스윙 포즈 분석</title>
   <link rel="stylesheet" href="src/css/style.css">
+  <script>try{var t=localStorage.getItem('swingfixer:theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script> <!-- 화면 모드: 첫 화면 깜빡임 방지 (theme.js 와 같은 키) -->
   <!-- MediaPipe Pose 는 src/js/mediapipe.js 가 처음 분석할 때 불러옴 (앱: vendor/mediapipe-pose 로컬 파일 우선, 없으면 CDN) -->
 </head>
 <body>
@@ -124,5 +125,11 @@
   <script type="module" src="src/app.js"></script>
   <script type="module" src="src/js/authui.js"></script>
   <script type="module" src="src/js/recordsui.js"></script>
+  <!-- 화면 모드 선택(다크/라이트/시스템 설정): 페이지 맨 아래, 로그인 창처럼 -->
+  <script type="module">
+    import { mountThemeSwitch } from './src/js/theme.js';
+    const box = document.createElement('div'); box.style.cssText = 'margin:20px 0 4px'; document.body.append(box);
+    mountThemeSwitch(box);
+  </script>
 </body>
 </html>
