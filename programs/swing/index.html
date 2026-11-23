@@ -8,6 +8,7 @@
   <meta name="theme-color" content="#121A14" media="(prefers-color-scheme: dark)">
   <title>골프 스윙 포즈 분석</title>
   <link rel="stylesheet" href="src/css/style.css">
+  <script>try{var t=localStorage.getItem('swingfixer:theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script> <!-- 화면 모드: 첫 화면 깜빡임 방지 (theme.js 와 같은 키) -->
   <!-- MediaPipe Pose 는 src/js/mediapipe.js 가 처음 분석할 때 불러옴 (앱: vendor/mediapipe-pose 로컬 파일 우선, 없으면 CDN) -->
 </head>
 <body>
@@ -79,6 +80,9 @@
     </section>
   </main>
 
+  <!-- 가로 모드 전용: 영상 두 개만 크게 보이고 이 재생 버튼 하나만 남는다 (세로 모드에서는 숨김, style.css .land-play) -->
+  <button type="button" class="land-play" id="landPlay" aria-label="재생 / 일시정지" disabled>▶</button>
+
   <p class="status" id="status" role="status">입력 방식을 선택하고 영상을 준비하세요.</p>
 
   <div class="controls actions">
@@ -123,5 +127,15 @@
   </script>
   <script type="module" src="src/app.js"></script>
   <script type="module" src="src/js/authui.js"></script>
+  <script type="module" src="src/js/recordsui.js"></script>
+  <!-- 설정(톱니바퀴): 스윙픽서 앱 안에서는 앱 위쪽 톱니바퀴를 쓰므로, 이 화면을 단독으로 열었을 때만 맨 아래에 보인다 -->
+  <script type="module">
+    import { mountThemeGear } from './src/js/theme.js';
+    if (window.top === window) {
+      const box = document.createElement('div'); box.className = 'themebox';
+      box.style.cssText = 'display:flex;justify-content:center;margin:20px 0 4px'; document.body.append(box);
+      mountThemeGear(box);
+    }
+  </script>
 </body>
 </html>

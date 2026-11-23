@@ -34,7 +34,7 @@ for (const dir of fs.readdirSync(r('programs'), { withFileTypes: true })) {
     const hook = path.join(base, 'build.mjs');
     if (fs.existsSync(hook)) await (await import(pathToFileURL(hook).href)).default({ out, base, root, native, slim });
   }
-  list.push({ id, order: m.order ?? 99, title: m.title ?? id, desc: m.desc ?? '', icon: m.icon ?? '', url: ready ? `programs/${id}/index.html` : null });
+  list.push({ id, order: m.order ?? 99, title: m.title ?? id, desc: m.desc ?? '', icon: m.icon ?? '', color: m.color, badge: m.badge, message: m.message, url: ready ? `programs/${id}/index.html` : null });
 }
 list.sort((a, b) => a.order - b.order);
 fs.writeFileSync(path.join(www, 'programs.json'), JSON.stringify(list, null, 2));

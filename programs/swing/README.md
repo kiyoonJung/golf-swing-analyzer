@@ -212,3 +212,9 @@
 `start.bat` 은 `serve.py` 를 실행합니다. python -m http.server 와 같지만 브라우저가 파일을 저장해 두지 않게
 (Cache-Control: no-store) 해서, 코드를 고친 뒤 새로고침만 해도 항상 최신 파일이 로딩됩니다.
 수동 실행: python serve.py        (다른 포트: python serve.py 8020)
+
+
+## 가로 모드 (폰을 눕혔을 때)
+프로 영상과 내 영상만 화면 가득 나란히 보이고, 재생 버튼 하나(▶/⏸)만 남습니다. 영상 선택·분석·단계 이동·피드백·저장은 모두 세로 모드에서 합니다.
+- 재생 버튼은 지금 고른 재생 모드(개별/동기화/동작 맞춤)를 그대로 따라 두 영상을 함께 재생·정지합니다.
+- 관련 코드: `style.css` '가로 모드' 블록, `index.html` 의 `#landPlay`, `src/js/player.js` 의 `togglePlayBoth`

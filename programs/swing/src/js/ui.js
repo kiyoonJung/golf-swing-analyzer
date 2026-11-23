@@ -31,23 +31,33 @@ export function setActiveChip(index) {
 }
 
 /** 하단 피드백 카드 갱신 (club = 클럽 프로필: 허용 오차와 조언 문구를 가짐) */
-export function showFeedback(stage, view, club) {
-  const card = $('feedbackCard'), text = $('feedbackText');
+/**
+ * 피드백 내용 만들기 → { ok, html }. 화면 표시(showFeedback)와 기록 저장(recordsui.js)이 같이 쓴다.
+ * (기존 showFeedback 의 문구 만드는 부분을 그대로 옮긴 것 — 화면 동작은 달라지지 않음)
+ */
+export function buildFeedback(stage, view, club) {
   const bad = getOffenders(stage, club.threshold);
   const head = stage.head?.bad ? headMessage(stage.head, view, club) : null;
   if (!bad.length && !head) {
-    card.className = 'card ok';
     // 적당함: 비교한 부위의 칭찬 문구 (최대 2개). 단계별 문구가 없으면 기본 문구만
     const goods = getGoodJoints(stage, club.threshold)
       .map((j) => club.stageAdvice?.[stage.name]?.[j]?.good).filter(Boolean).slice(0, 2);
-    text.innerHTML = `<strong>${stage.name}</strong>: 비교한 부위가 모두 프로와 허용 범위 이내예요. 좋은 자세예요!`
-      + (goods.length ? '<br>' + goods.join(' ') : '');
-    return;
+    return {
+      ok: true,
+      html: `<strong>${stage.name}</strong>: 비교한 부위가 모두 프로와 허용 범위 이내예요. 좋은 자세예요!`
+        + (goods.length ? '<br>' + goods.join(' ') : ''),
+    };
   }
-  card.className = 'card bad';
   const lines = bad.slice(0, 2).map((o) => jointMessage(o, stage.name, view, club));
   if (head) lines.unshift(head); // 머리 위치는 각도와 단위가 달라 따로 맨 앞에 표시
-  text.innerHTML = `<strong>${stage.name}</strong><br>` + lines.join('<br>');
+  return { ok: false, html: `<strong>${stage.name}</strong><br>` + lines.join('<br>') };
+}
+
+export function showFeedback(stage, view, club) {
+  const card = $('feedbackCard'), text = $('feedbackText');
+  const { ok, html } = buildFeedback(stage, view, club);
+  card.className = ok ? 'card ok' : 'card bad';
+  text.innerHTML = html;
 }
 
 const SIDE_KR = { L: '왼쪽', R: '오른쪽' };
