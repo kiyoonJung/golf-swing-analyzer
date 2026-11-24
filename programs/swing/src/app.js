@@ -113,7 +113,6 @@ const state = {
   selected: 0,       // 현재 선택된 단계 번호
   proLms: [],        // 프로 스켈레톤 표시용 단계별 랜드마크
   userReady: false,
-  userSource: null,  // [서버 저장용] 내 영상 원본(File/Blob)
   busy: false,
 };
 
@@ -123,7 +122,7 @@ const currentClub = () => CLUBS[state.club]; // 현재 선택된 클럽 프로�
 // 배속은 실제 속도 기준: 프로 영상은 클럽 프로필의 proSlowmo 만큼 빠르게 재생해야 1x = 실제 속도
 // 동기화 기준점: 분석으로 찾은 단계별 (사용자 시각, 프로 시각) 쌍
 const player = createPlayer({
-  proVideo, userVideo, proCtl: $('proCtl'), userCtl: $('userCtl'), modeSeg: $('modeSeg'), landPlay: $('landPlay'),
+  proVideo, userVideo, proCtl: $('proCtl'), userCtl: $('userCtl'), modeSeg: $('modeSeg'),
   getSlowmo: () => currentClub().proSlowmo?.[state.view] ?? 1,
   getKnots: () => (state.stages ?? []).map((st) => ({ u: st.userT, p: proSeekTime(st.proT) })),
   // 동기화 재생은 어드레스에서 함께 출발하는 템포 비교용 → 모드를 바꾸면 두 영상을 어드레스로 이동
@@ -203,7 +202,6 @@ async function loadProReference() {
   const token = ++loadToken;
   const { club, view } = state;
   state.reference = null; state.stages = null; state.userFrames = null;
-  document.dispatchEvent(new CustomEvent('swingfixer:reset')); // [서버 저장용] 분석 결과가 사라짐
   $('chips').innerHTML = ''; $('analyzeBtn').disabled = true;
   hideAdjuster();
   player.setReady('pro', false); player.pauseAll();
@@ -234,7 +232,6 @@ async function loadProReference() {
 // ===== 사용자 영상 지정 =====
 async function setUserVideo(url) {
   state.stages = null; state.userFrames = null; state.userReady = false;
-  document.dispatchEvent(new CustomEvent('swingfixer:reset')); // [서버 저장용] 분석 결과가 사라짐
   $('chips').innerHTML = '';
   hideAdjuster();
   player.setReady('user', false);
@@ -277,7 +274,6 @@ async function runAnalysis() {
     // 처음 보여줄 단계: 클럽 프로필의 defaultStage(백스윙 탑). 기준 파일에 없으면 두 번째 단계
     const first = state.stages.findIndex((st) => st.name === currentClub().defaultStage);
     selectStage(first >= 0 ? first : Math.min(1, state.stages.length - 1));
-    document.dispatchEvent(new CustomEvent('swingfixer:analyzed')); // [서버 저장용] 분석 완료 → 저장 버튼 켜짐
     const worst = Math.max(...state.stages.map((st) => st.matchDist ?? 0));
     // 진단용: 단계별로 찾은 시각(기준 시각). 기준 영상을 그대로 올린 테스트에서는 두 값이 거의 같아야 함
     const detail = state.stages
@@ -363,7 +359,6 @@ $('inputSeg').onclick = (e) => {
 
 $('userFile').onchange = async (e) => {
   const file = e.target.files[0]; if (!file) return;
-  state.userSource = file; // [서버 저장용] 올린 영상 원본 보관 (recordsui.js 가 저장 때 사용)
   try { await setUserVideo(toObjectUrl(file)); } catch (err) { setStatus(err.message); }
 };
 
@@ -398,7 +393,6 @@ $('stopRecBtn').onclick = async () => {
   $('stopRecBtn').disabled = true; $('flipBtn').disabled = true;
   try {
     const blob = await stopRecording();
-    state.userSource = blob; // [서버 저장용] 녹화한 영상 원본 보관
     stopCamera(userVideo);
     guideImg.hidden = true;
     await setUserVideo(toObjectUrl(blob));
@@ -454,14 +448,6 @@ new ResizeObserver(() => {
   const card = $('feedbackCard');
   document.documentElement.style.setProperty('--card-h', (card.hidden ? 0 : card.offsetHeight) + 'px');
 }).observe($('feedbackCard'));
-
-// [서버 저장용] recordsui.js 가 읽는 현재 분석 상태. 분석 결과가 없으면 null. (읽기만 하고 아무것도 바꾸지 않음)
-window.swingfixer = {
-  getSnapshot: () => (state.stages && state.userFrames ? {
-    club: state.club, view: state.view, stages: state.stages, userFrames: state.userFrames, aspect: state.aspect,
-    size: { w: userVideo.videoWidth, h: userVideo.videoHeight }, video: state.userSource ?? null,
-  } : null),
-};
 
 // 끝까지 실행됐다는 표시 (index.html 의 로딩 실패 안내가 이 값을 확인함)
 window.__appStarted = true;
