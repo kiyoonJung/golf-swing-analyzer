@@ -4,9 +4,12 @@
   --card: #FFFFFF; --line: #CBD3C4;
   --turf: #2F6B3A; --ok: #1FA64A; --bad: #E5383B;
 }
+/* 화면 모드: 시스템 설정(기본) 또는 data-theme 로 강제 (theme.js) */
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #121A14; --ink: #E8EEE4; --sub: #9DB0A2; --card: #1B261E; --line: #2D3B31; --turf: #4E9A5C; }
+  :root:not([data-theme="light"]) { --bg: #121A14; --ink: #E8EEE4; --sub: #9DB0A2; --card: #1B261E; --line: #2D3B31; --turf: #4E9A5C; }
 }
+:root[data-theme="dark"] { color-scheme: dark; --bg: #121A14; --ink: #E8EEE4; --sub: #9DB0A2; --card: #1B261E; --line: #2D3B31; --turf: #4E9A5C; }
+:root[data-theme="light"] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -218,58 +221,39 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
    가로 모드 (폰을 눕혔을 때): 화면 높이가 낮아서 영상 높이를 최대한 확보한다.
    왼쪽 = 두 영상(스크롤해도 화면에 고정) / 오른쪽 = 설정·분석하기·단계 칩·피드백·미세 조정(이 칸만 스크롤)
    ===================================================================== */
+/* ===== 가로 모드: 프로 영상과 내 영상만 화면 가득 크게, 조작은 재생 버튼 하나 =====
+   영상 선택·분석·단계·피드백 등 모든 조작은 세로 모드에서 하고, 폰을 눕히면 비교 화면만 보인다.
+   (재생 버튼 동작은 player.js 의 togglePlayBoth — 지금 고른 재생 모드를 그대로 따름) */
+.land-play {
+  display: none; position: fixed; z-index: 20;
+  left: 50%; bottom: calc(14px + var(--sab, 0px)); transform: translateX(-50%);
+  width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); color: #fff; font-size: 24px; line-height: 1; cursor: pointer;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+.land-play:disabled { opacity: .4; cursor: default; }
 @media (max-height: 500px) and (orientation: landscape) and (pointer: coarse), (max-height: 500px) and (orientation: landscape) and (hover: none) {
-  :root { --land-reserve: 146px; }   /* 영상 위·아래로 쓰는 높이(제목 + 재생 컨트롤 + 여백). 영상 높이 = 화면 높이 - 이 값 */
+  :root { --land-reserve: calc(14px + var(--sat) + var(--sab)); }   /* 영상 높이 = 화면 높이 - 이 값 (거의 전체) */
   body {
-    display: grid; align-content: start; column-gap: 10px; row-gap: 8px;
-    grid-template-columns: minmax(0, 1fr) clamp(230px, 36vw, 300px);
-    grid-template-rows: repeat(6, auto) 1fr;          /* 6칸(설정~미세조정) + 남는 높이를 흡수하는 마지막 칸 */
-    padding: calc(6px + var(--sat)) calc(10px + var(--sar)) calc(8px + var(--sab)) calc(10px + var(--sal));
+    display: block; height: 100vh; height: 100svh; overflow: hidden; margin: 0;
+    padding: calc(7px + var(--sat)) calc(10px + var(--sar)) calc(7px + var(--sab)) calc(10px + var(--sal));
   }
-  h1 { display: none; }
-  .btn, .seg button, .chip { min-height: 38px; }
-  .btn.sm { min-height: 34px; }
-  .seg.sm button { min-height: 30px; }
-
-  .players { grid-column: 1; grid-row: 1 / 8; position: sticky; top: calc(6px + var(--sat)); align-self: start; }
-  .topbar  { grid-column: 2; grid-row: 1; }
-  .actions { grid-column: 2; grid-row: 2; }
-  .status  { grid-column: 2; grid-row: 3; margin: 0; font-size: 12px; }
-  .chips   { grid-column: 2; grid-row: 4; margin: 0; padding: 2px 0; }
-  .card    { grid-column: 2; grid-row: 5; }
-  .adjust  { grid-column: 2; grid-row: 6; margin: 0; }
-
-  /* 영상 칸: 화면 높이에서 제목/컨트롤 높이를 뺀 값을 넘지 않게 (비율은 그대로) */
+  /* 가로 모드에서 숨기는 것: 제목·설정·분석 버튼·상태·단계 칩·미세조정·피드백·영상별 컨트롤·로그인·저장/기록·설정(톱니바퀴) */
+  .topbar, h1, .actions, .status, .chips, .adjust, .card, .vctl, .pane h2, .authbar, .recbar, .themebox { display: none !important; }
+  .players { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 100%; align-items: center; position: static; }
+  .pane { display: flex; align-items: center; justify-content: center; min-width: 0; }
+  /* 두 영상을 가운데로 붙여서 비교하기 쉽게 (왼쪽 영상은 오른쪽 끝으로, 오른쪽 영상은 왼쪽 끝으로) */
+  .pane:first-child { justify-content: flex-end; }
+  .pane:last-child { justify-content: flex-start; }
   .stage {
+    margin: 0;
     width: min(100%, calc((100vh - var(--land-reserve)) * var(--ar, .5625)));
     width: min(100%, calc((100svh - var(--land-reserve)) * var(--ar, .5625)));
   }
-
   #userStage {
     width: min(100%, calc(var(--match-h, calc(100vh - var(--land-reserve))) * var(--ar, .5625)));
     width: min(100%, calc(var(--match-h, calc(100svh - var(--land-reserve))) * var(--ar, .5625)));
   }
-
-  /* 영상별 컨트롤을 낮게: [▶ 시간 스켈레톤] / [배속] / [재생바] */
-  .vctl { gap: 4px; margin-top: 4px; }
-  .vctl .time { order: 2; flex: 1 1 0; }
-  .vctl .skel { order: 3; margin-left: 0; }
-  .vctl .speeds { order: 4; }
-  .vctl .speeds button { padding: 5px 0; }
-  .vctl .seek { order: 5; height: 22px; min-height: 22px; }
-
-  /* 피드백 카드는 오른쪽 칸 안에서 일반 요소로 (하단 고정 해제) */
-  .card { position: static; max-width: none; max-height: none; margin: 0; box-shadow: none; z-index: auto; font-size: 13px; }
-
-  /* 좁은 칸에서도 재생 모드 글자가 한 줄로 */
-  .actions .seg button { font-size: 12px; padding-left: 2px; padding-right: 2px; white-space: nowrap; }
-
-  /* 분석이 끝나면(피드백 카드에 .ok/.bad 가 붙으면) 결과 쪽을 위로, 자주 안 바꾸는 설정은 아래로.
-     :has() 를 지원하지 않는 구형 기기에서는 이 규칙이 무시되고 위의 기본 순서(설정이 위)로 보인다. */
-  body:has(.card.ok, .card.bad) .actions { grid-row: 1; }
-  body:has(.card.ok, .card.bad) .status  { grid-row: 2; }
-  body:has(.card.ok, .card.bad) .chips   { grid-row: 3; }
-  body:has(.card.ok, .card.bad) .card    { grid-row: 4; }
-  body:has(.card.ok, .card.bad) .adjust  { grid-row: 5; }
-  body:has(.card.ok, .card.bad) .topbar  { grid-row: 6; }
+  .land-play { display: grid; place-items: center; }
 }

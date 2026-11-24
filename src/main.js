@@ -13,14 +13,16 @@ async function main() {
   catch { app.innerHTML = '<div class="empty"><b>프로그램 목록을 불러오지 못했습니다</b><span>터미널에서 npm run dev 로 실행했는지 확인해 주세요.</span></div>'; return; }
 
   app.innerHTML = `
-  <section class="home"><header class="top"><h1 class="brand">${FLAG}${NAME}</h1><p class="lead">프로그램을 선택하세요</p></header>
+  <section class="home"><header class="top"><h1 class="brand">${FLAG}${NAME}</h1><p class="lead">프로그램을 선택하세요</p><span class="gearhost"></span></header>
     <div class="grid">${programs.map((p, i) => `<a class="tile${p.url ? '' : ' soon'}" href="#${esc(p.id)}" style="--i:${i}${p.color ? `;--c:${esc(p.color)}` : ''}"><span class="ico">${svg(p.icon)}</span>${p.url ? `<span class="go">${svg('<path d="M7 17L17 7M9 7h8v8"/>')}</span>` : `<span class="pill">${esc(p.badge ?? '준비 중')}</span>`}<span class="wm">${svg(p.icon)}</span><span class="tx"><b>${esc(p.title)}</b>${p.desc ? `<span class="d">${esc(p.desc)}</span>` : ''}</span></a>`).join('')}</div></section>
   <section class="shell" hidden>
-    <header class="top bar"><a class="back" href="#" aria-label="홈으로">${svg('<path d="M15 6l-6 6 6 6"/>')}</a><h1 class="brand">${NAME}</h1></header>
+    <header class="top bar"><a class="back" href="#" aria-label="홈으로">${svg('<path d="M15 6l-6 6 6 6"/>')}</a><h1 class="brand">${NAME}</h1><span class="gearhost"></span></header>
     <nav class="tabs" role="tablist" aria-label="프로그램">${programs.map((p) => `<button class="tab" role="tab" data-id="${esc(p.id)}">${esc(p.title)}</button>`).join('')}</nav>
     <main class="stage"></main></section>`;
 
   const home = app.querySelector('.home'), shell = app.querySelector('.shell');
+  // 설정(톱니바퀴): 홈과 프로그램 화면 위쪽. 누르면 설정 창(화면 모드 다크/라이트/시스템). 못 불러와도 앱은 정상 동작
+  import('../programs/swing/src/js/theme.js').then((m) => app.querySelectorAll('.gearhost').forEach((h) => m.mountThemeGear(h))).catch(() => {});
   const tabs = shell.querySelector('.tabs'), stage = shell.querySelector('.stage');
   let panels = {};   // 연 프로그램은 탭을 오가도 유지. 홈으로 나가면 모두 닫는다(카메라도 함께 꺼짐).
 
