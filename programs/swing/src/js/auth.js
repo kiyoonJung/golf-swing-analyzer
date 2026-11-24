@@ -62,6 +62,19 @@ export async function signIn(email, password) {
   return data.user;
 }
 
+/**
+ * 카카오로 로그인 — 카카오 로그인 화면으로 이동했다가 이 주소로 돌아온다 (돌아온 뒤 세션은 onAuthChange 가 알려준다).
+ * 이메일 동의 항목(account_email)은 요청하지 않는다(비즈 앱이 아니면 KOE205 오류가 나므로).
+ * → Supabase 의 Kakao 설정에서 "Allow users without an email" 을 켜 두어야 한다.
+ */
+export async function signInWithKakao() {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'kakao',
+    options: { redirectTo: backUrl(), scopes: 'profile_nickname profile_image' },
+  });
+  check(error);
+}
+
 /** 로그아웃 */
 export async function signOut() {
   const { error } = await supabase.auth.signOut();

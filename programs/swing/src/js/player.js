@@ -84,6 +84,7 @@ export function buildCurve(knots, outside) {
  * @param o.getKnots    () => [{u: 사용자 시각, p: 프로 시각}, ...] 단계 순서대로 (분석 전이면 [])
  *                      sync 는 첫 단계(어드레스)만, match 는 전체 단계를 사용
  * @param o.onSyncMode     () => void  동기화 계열 모드로 바꿀 때 호출 (앱이 두 영상을 어드레스로 이동)
+ * @param o.landPlay       (선택) 가로 모드 전용 재생 버튼 — 두 영상을 함께 재생/일시정지
  * @param o.beforeSyncPlay () => void  동기화 재생 직전 호출 (단계 버튼으로 이동한 상태면 앱이 어드레스로 되돌림)
  */
 export function createPlayer(o) {
@@ -133,6 +134,8 @@ export function createPlayer(o) {
     ctls[who].querySelector('.seek').oninput = (e) => seek(who, (Number(e.target.value) / 1000) * dur(vids[who]));
   }
 
+  if (o.landPlay) o.landPlay.onclick = togglePlayBoth;
+
   o.modeSeg.onclick = (e) => {
     const m = e.target.dataset.mode; if (!m || m === mode) return;
     pauseAll(); mode = m;
@@ -168,6 +171,20 @@ export function createPlayer(o) {
     o.beforeSyncPlay?.();
     alignPro(); applyRate('user'); applyRate('pro'); smoothRate = null;
     play(vids.user); play(vids.pro);
+  }
+
+  /** 가로 모드 재생 버튼: 지금 재생 모드 그대로 두 영상을 함께 재생/일시정지 (개별 모드면 각자 고른 배속으로 둘 다) */
+  function togglePlayBoth() {
+    if (locked) return;
+    if (linked()) return togglePlay('user');
+    if (!ready.pro && !ready.user) return;
+    if (!vids.pro.paused || !vids.user.paused) return pauseAll();
+    for (const who of ['pro', 'user']) {
+      if (!ready[who]) continue;
+      const v = vids[who];
+      if (v.ended) v.currentTime = 0;
+      applyRate(who); play(v);
+    }
   }
 
   function seek(who, t) {
@@ -239,6 +256,12 @@ export function createPlayer(o) {
       seekEl.disabled = !okNow || locked;
       if (d && document.activeElement !== seekEl) seekEl.value = Math.round((v.currentTime / d) * 1000);
       c.querySelector('.time').textContent = `${v.currentTime.toFixed(2)}s / ${d ? d.toFixed(2) : '–'}s`;
+    }
+    if (o.landPlay) {
+      const playing = linked() ? !vids.user.paused : (!vids.pro.paused || !vids.user.paused);
+      const okBoth = linked() ? (ready.pro && ready.user) : (ready.pro || ready.user);
+      o.landPlay.textContent = playing ? '⏸' : '▶';
+      o.landPlay.disabled = locked || !okBoth;
     }
   }
   requestAnimationFrame(tick);
