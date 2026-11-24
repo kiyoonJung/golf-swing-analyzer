@@ -73,7 +73,6 @@ svg{display:block}
 .home .gearhost{position:absolute;right:18px;top:calc(18px + env(safe-area-inset-top,0))}
 .bar .gearhost{margin-left:auto;margin-right:12px}
 /* 폰을 눕히면 프로그램 화면이 전체를 쓴다 (이름·탭·설정 숨김). 다시 보려면 세로로 돌리면 된다. */
-@media (max-height:500px) and (orientation:landscape) and (pointer:coarse),(max-height:500px) and (orientation:landscape) and (hover:none){
-  .shell .top,.shell .tabs{display:none}
-}
+html.land .shell .top, html.land .shell .tabs { display: none; }   /* 폰을 눕히면 이름·탭·설정을 숨기고 프로그램 화면이 전체를 쓴다 (html.land: index.html 스크립트) */
+
 @media (prefers-reduced-motion:reduce){.tile,.go{transition:none}}

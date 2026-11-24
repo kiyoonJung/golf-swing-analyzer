@@ -217,4 +217,5 @@
 ## 가로 모드 (폰을 눕혔을 때)
 프로 영상과 내 영상만 화면 가득 나란히 보이고, 재생 버튼 하나(▶/⏸)만 남습니다. 영상 선택·분석·단계 이동·피드백·저장은 모두 세로 모드에서 합니다.
 - 재생 버튼은 지금 고른 재생 모드(개별/동기화/동작 맞춤)를 그대로 따라 두 영상을 함께 재생·정지합니다.
-- 관련 코드: `style.css` '가로 모드' 블록, `index.html` 의 `#landPlay`, `src/js/player.js` 의 `togglePlayBoth`
+- 가로 판정: `index.html` 맨 위 스크립트가 화면이 가로이고 낮을 때(폰을 눕힘) `<html class="land">`를 붙입니다. (앱 안 브라우저에서도 맞게 동작하도록 CSS 미디어쿼리 대신 직접 잽니다. 앱 화면 `index.html`에도 같은 스크립트가 있습니다)
+- 관련 코드: `style.css` 의 `html.land` 블록, `index.html` 의 `#landPlay`, `src/js/player.js` 의 `togglePlayBoth`

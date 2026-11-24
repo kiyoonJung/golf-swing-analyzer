@@ -10,6 +10,23 @@
   <link rel="stylesheet" href="src/css/style.css">
   <script>try{var t=localStorage.getItem('swingfixer:theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t}catch(e){}</script> <!-- 화면 모드: 첫 화면 깜빡임 방지 (theme.js 와 같은 키) -->
   <!-- MediaPipe Pose 는 src/js/mediapipe.js 가 처음 분석할 때 불러옴 (앱: vendor/mediapipe-pose 로컬 파일 우선, 없으면 CDN) -->
+  <script>
+    /* 가로 모드 감지: 화면이 가로이고 낮으면(폰을 눕힌 상태) <html class="land"> 를 붙인다. CSS 미디어쿼리 대신 직접 재서, 앱 안 브라우저(카카오톡 등)에서도 맞게 동작.
+       아이폰은 방향이 바뀐 직후 화면 크기를 늦게 알려주므로 몇 번 더 다시 잰다. */
+    (function () {
+      var h = document.documentElement;
+      function f() {
+        var w = window.innerWidth, ht = window.innerHeight;
+        var touch = (navigator.maxTouchPoints || 0) > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches);
+        h.classList.toggle('land', w > ht && ht <= 520 && touch);
+      }
+      function later() { f(); setTimeout(f, 150); setTimeout(f, 450); setTimeout(f, 1000); }
+      f();
+      addEventListener('resize', f);
+      addEventListener('orientationchange', later);
+      if (window.visualViewport) visualViewport.addEventListener('resize', f);
+    })();
+  </script>
 </head>
 <body>
   <header class="topbar">

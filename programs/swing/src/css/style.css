@@ -221,7 +221,7 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
    가로 모드 (폰을 눕혔을 때): 화면 높이가 낮아서 영상 높이를 최대한 확보한다.
    왼쪽 = 두 영상(스크롤해도 화면에 고정) / 오른쪽 = 설정·분석하기·단계 칩·피드백·미세 조정(이 칸만 스크롤)
    ===================================================================== */
-/* ===== 가로 모드: 프로 영상과 내 영상만 화면 가득 크게, 조작은 재생 버튼 하나 =====
+/* ===== 가로 모드 (html.land — index.html 맨 위 스크립트가 폰을 눕힌 상태일 때 붙임): 프로 영상과 내 영상만 화면 가득 크게, 조작은 재생 버튼 하나 =====
    영상 선택·분석·단계·피드백 등 모든 조작은 세로 모드에서 하고, 폰을 눕히면 비교 화면만 보인다.
    (재생 버튼 동작은 player.js 의 togglePlayBoth — 지금 고른 재생 모드를 그대로 따름) */
 .land-play {
@@ -233,27 +233,26 @@ button:focus-visible, .btn:focus-within { outline: 3px solid var(--turf); outlin
   box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
 }
 .land-play:disabled { opacity: .4; cursor: default; }
-@media (max-height: 500px) and (orientation: landscape) and (pointer: coarse), (max-height: 500px) and (orientation: landscape) and (hover: none) {
-  :root { --land-reserve: calc(14px + var(--sat) + var(--sab)); }   /* 영상 높이 = 화면 높이 - 이 값 (거의 전체) */
-  body {
-    display: block; height: 100vh; height: 100svh; overflow: hidden; margin: 0;
-    padding: calc(7px + var(--sat)) calc(10px + var(--sar)) calc(7px + var(--sab)) calc(10px + var(--sal));
-  }
-  /* 가로 모드에서 숨기는 것: 제목·설정·분석 버튼·상태·단계 칩·미세조정·피드백·영상별 컨트롤·로그인·저장/기록·설정(톱니바퀴) */
-  .topbar, h1, .actions, .status, .chips, .adjust, .card, .vctl, .pane h2, .authbar, .recbar, .themebox { display: none !important; }
-  .players { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 100%; align-items: center; position: static; }
-  .pane { display: flex; align-items: center; justify-content: center; min-width: 0; }
-  /* 두 영상을 가운데로 붙여서 비교하기 쉽게 (왼쪽 영상은 오른쪽 끝으로, 오른쪽 영상은 왼쪽 끝으로) */
-  .pane:first-child { justify-content: flex-end; }
-  .pane:last-child { justify-content: flex-start; }
-  .stage {
-    margin: 0;
-    width: min(100%, calc((100vh - var(--land-reserve)) * var(--ar, .5625)));
-    width: min(100%, calc((100svh - var(--land-reserve)) * var(--ar, .5625)));
-  }
-  #userStage {
-    width: min(100%, calc(var(--match-h, calc(100vh - var(--land-reserve))) * var(--ar, .5625)));
-    width: min(100%, calc(var(--match-h, calc(100svh - var(--land-reserve))) * var(--ar, .5625)));
-  }
-  .land-play { display: grid; place-items: center; }
+html.land { --land-reserve: calc(14px + var(--sat) + var(--sab)); }   /* 영상 높이 = 화면 높이 - 이 값 (거의 전체) */
+html.land body {
+  display: block; height: 100vh; height: 100svh; overflow: hidden; margin: 0;
+  padding: calc(7px + var(--sat)) calc(10px + var(--sar)) calc(7px + var(--sab)) calc(10px + var(--sal));
 }
+/* 가로 모드에서 숨기는 것: 제목·설정·분석 버튼·상태·단계 칩·미세조정·피드백·영상별 컨트롤·로그인·저장/기록·설정(톱니바퀴) */
+html.land .topbar, html.land h1, html.land .actions, html.land .status, html.land .chips, html.land .adjust,
+html.land .card, html.land .vctl, html.land .pane h2, html.land .authbar, html.land .recbar, html.land .themebox { display: none !important; }
+html.land .players { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 100%; align-items: center; position: static; }
+html.land .pane { display: flex; align-items: center; justify-content: center; min-width: 0; }
+/* 두 영상을 가운데로 붙여서 비교하기 쉽게 (왼쪽 영상은 오른쪽 끝으로, 오른쪽 영상은 왼쪽 끝으로) */
+html.land .pane:first-child { justify-content: flex-end; }
+html.land .pane:last-child { justify-content: flex-start; }
+html.land .stage {
+  margin: 0;
+  width: min(100%, calc((100vh - var(--land-reserve)) * var(--ar, .5625)));
+  width: min(100%, calc((100svh - var(--land-reserve)) * var(--ar, .5625)));
+}
+html.land #userStage {
+  width: min(100%, calc(var(--match-h, calc(100vh - var(--land-reserve))) * var(--ar, .5625)));
+  width: min(100%, calc(var(--match-h, calc(100svh - var(--land-reserve))) * var(--ar, .5625)));
+}
+html.land .land-play { display: grid; place-items: center; }
