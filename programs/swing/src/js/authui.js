@@ -13,12 +13,6 @@
 (async () => {
   const MIN_PW = 6;          // Supabase 기본 최소 비밀번호 길이
   const MAIL_COOLDOWN = 60;  // 재설정 메일은 연속으로 누르지 못하게 60초 대기 (메일 한도 보호)
-  // [B] 껍데기(홈 화면) 안의 iframe 으로 열렸는가? 그렇다면 로그인 창은 껍데기가 맡는다:
-  //     로그아웃 상태의 버튼은 껍데기에 "로그인 창 열어줘" 메시지를 보내고, 로그인 상태의 버튼만 이 파일의 "내 계정" 창을 연다.
-  //     (주소를 직접 연 단독 실행 — start.bat 8010, auth-test.html — 은 예전처럼 이 파일이 전부 처리한다)
-  const EMBEDDED = window.parent !== window;
-  const tellShell = (type) => { try { window.parent.postMessage({ type }, location.origin); } catch { /* 무시 */ } };
-  const isGuest = () => { try { return sessionStorage.getItem('swingfixer:guest') === '1'; } catch { return false; } };
 
   // ---------- 스타일 (style.css 의 색 변수를 그대로 사용, 없으면 기본색) ----------
   const style = document.createElement('style');
@@ -227,7 +221,7 @@
     const go = e.target.closest('[data-go]');
     if (go) return render(go.dataset.go);
     if (e.target.closest('[data-signout]')) {
-      try { await A.signOut(); close(); if (EMBEDDED) tellShell('swingfixer:signed-out'); } catch (err) { say(err.message, 'err'); }
+      try { await A.signOut(); close(); } catch (err) { say(err.message, 'err'); }
     }
   });
   dlg.querySelector('[data-close]').onclick = close;
@@ -240,26 +234,11 @@
       const name = (u.email || '').split('@')[0];
       btn.textContent = '👤 ' + (name.length > 12 ? name.slice(0, 12) + '…' : name);
       btn.title = u.email || '';
-    } else if (EMBEDDED && isGuest()) { btn.textContent = '게스트 · 로그인'; btn.title = '로그인하면 기록을 저장할 수 있어요'; }
-    else { btn.textContent = '로그인'; btn.title = ''; }
+    } else { btn.textContent = '로그인'; btn.title = ''; }
   }
-  btn.onclick = () => {
-    if (!state.user && EMBEDDED) return tellShell('swingfixer:open-login');   // 로그인 창은 껍데기(gate.js)가 연다
-    open(state.user ? 'account' : 'login');
-  };
+  btn.onclick = () => open(state.user ? 'account' : 'login');
 
   // ---------- 로그인 상태 변화 ----------
-  // 껍데기에서 로그인했을 때 이 화면의 버튼도 바로 갱신 (브라우저 간 이벤트가 늦거나 안 올 때를 대비)
-  window.addEventListener('message', async (e) => {
-    if (e.origin !== location.origin || e.data?.type !== 'swingfixer:auth-changed') return;
-    try {
-      state.user = await A.getCurrentUser();
-      paintButton();
-      document.documentElement.dataset.signedIn = state.user ? 'true' : 'false';
-      document.dispatchEvent(new CustomEvent('swingfixer:user', { detail: { user: state.user } }));
-    } catch { /* 무시 */ }
-  });
-
   A.onAuthChange((event, user) => {
     state.user = user;
     paintButton();
